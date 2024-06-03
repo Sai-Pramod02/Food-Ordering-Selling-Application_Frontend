@@ -1,0 +1,160 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import ' api_service.dart';
+import 'package:food_buddies/components/communityDropdown.dart';
+import 'past_orders_page.dart';
+
+class SellerProfile extends StatefulWidget {
+  @override
+  _SellerProfileState createState() => _SellerProfileState();
+}
+
+class _SellerProfileState extends State<SellerProfile> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _upiController = TextEditingController();
+  String? _selectedCommunity;
+  String? _selectedDeliveryType;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String phone = prefs.getString('phoneNumber') ?? '';
+
+    final profile = await APIService.getSellerProfile(phone);
+    setState(() {
+      _nameController.text = profile['seller_name'];
+      _phoneController.text = profile['seller_phone'];
+      _addressController.text = profile['seller_address'];
+      _upiController.text = profile['seller_upi'];
+      String community = prefs.getString('community') ?? '';
+      _selectedCommunity = community;
+      _selectedDeliveryType = profile['delivery_type'];
+    });
+  }
+
+  Future<void> _updateProfile() async {
+    if (_formKey.currentState!.validate()) {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      String phone = prefs.getString('phoneNumber') ?? '';
+      print(_selectedDeliveryType);
+      await APIService.updateSellerProfile(
+        phone: phone,
+        name: _nameController.text,
+        address: _addressController.text,
+        upi: _upiController.text,
+        community: _selectedCommunity!,
+        deliveryType: _selectedDeliveryType!,
+      );
+      await prefs.setString('community', _selectedCommunity!);
+
+      // Reload the profile to ensure the UI reflects the latest data
+      await _loadProfile();
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Seller Profile')),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Name'),
+                validator: (value) {
+                  if (value!.isEmpty) return 'Please enter your name';
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: _phoneController,
+                decoration: InputDecoration(labelText: 'Phone'),
+                enabled: false,
+              ),
+              TextFormField(
+                controller: _addressController,
+                decoration: InputDecoration(labelText: 'Address'),
+                validator: (value) {
+                  if (value!.isEmpty) return 'Please enter your address';
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: _upiController,
+                decoration: InputDecoration(labelText: 'UPI'),
+                validator: (value) {
+                  if (value!.isEmpty) return 'Please enter your UPI';
+                  return null;
+                },
+              ),
+              CommunityDropdown(
+                initialCommunity: _selectedCommunity,
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedCommunity = newValue;
+                  });
+                },
+              ),
+              DropdownButtonFormField<String>(
+                value: _selectedDeliveryType,
+                items: ['HOME DELIVERY', 'PICK UP'].map((String value) {
+
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  print(newValue);
+                  setState(() {
+                    _selectedDeliveryType = newValue;
+                  });
+                },
+                decoration: InputDecoration(labelText: 'Delivery Type'),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _updateProfile,
+                child: Text('Update Profile'),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white, backgroundColor: Colors.blue, // Text color
+                  textStyle: TextStyle(fontSize: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                ),
+                onPressed: () async {
+                  final SharedPreferences prefs = await SharedPreferences.getInstance();
+                  String phoneNumber = prefs.getString('phoneNumber') ?? '';
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PastOrdersPage(buyerPhone: phoneNumber)),
+                  );
+                },
+                child: Text('Your Orders'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

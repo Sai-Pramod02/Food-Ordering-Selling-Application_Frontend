@@ -1,12 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:food_buddies/pages/buyer_registration_page.dart';
 import 'package:food_buddies/pages/home_page.dart';
+import 'package:food_buddies/pages/seller_nav_bar.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 import 'package:snippet_coder_utils/FormHelper.dart';
 import 'package:snippet_coder_utils/ProgressHUD.dart';
 import 'package:snippet_coder_utils/hex_color.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import ' api_service.dart';
+import 'buyer_nav_bar.dart';
 import 'config.dart';
+import 'package:http/http.dart' as http;
 
 class OTPVerifyPage extends StatefulWidget {
   final String? mobileNo;
@@ -18,6 +24,7 @@ class OTPVerifyPage extends StatefulWidget {
   _OTPVerifyPageState createState() => _OTPVerifyPageState();
 }
 
+
 class _OTPVerifyPageState extends State<OTPVerifyPage> {
   bool enableResendBtn = false;
   String _otpCode = "";
@@ -26,6 +33,7 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
   //var autoFill;
   late FocusNode myFocusNode;
   bool isAPIcallProcess = false;
+
 
   @override
   void initState() {
@@ -53,6 +61,32 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
     //   },
     // );
   }
+    void storePhoneNumber(String phoneNumber) async {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('phoneNumber', phoneNumber);
+    }
+  Future<String> getPhoneNumber() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String phoneNumber = prefs.getString('phoneNumber') ?? '';
+    return phoneNumber;
+  }
+  Future<String> checkUserType() async {
+    String userPhone = await getPhoneNumber(); // Get phone number from shared preferences
+    var url = Uri.http(Config.apiURL, Config.checkUserTypeAPI);
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"phone": userPhone}),
+    );
+    print(response.body);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['userType'];
+    } else {
+      throw Exception('Failed to check user type');
+    }
+  }
+
 
 
   @override
@@ -138,11 +172,29 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
                   });
 
                   if (response.data != null) {
-                    //REDIRECT TO HOME SCREEN
-                    Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => HomePage()),
-                    );
+                    // Store phone number in shared preferences
+                    storePhoneNumber(widget.mobileNo!);
+
+                    // Check user type and navigate to the appropriate page
+                    checkUserType().then((userType) {
+                      if (userType == 'buyer') {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => BuyerHomePage()),
+                        );
+                      } else if (userType == 'seller') {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => SellerHomePage()),
+                        );
+                      }
+                      else{
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => BuyerRegistration()),
+                        );
+                      }
+                    });
                   } else {
                     FormHelper.showSimpleAlertDialog(
                       context,
@@ -156,7 +208,7 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
                   }
                 });
               }
-            },
+                },
             btnColor: HexColor("#78D0B1"),
             borderColor: HexColor("#78D0B1"),
             txtColor: HexColor(

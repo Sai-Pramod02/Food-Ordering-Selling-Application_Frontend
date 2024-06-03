@@ -17,7 +17,9 @@ class SellerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Map<String, dynamic>> topItems = allItems.take(2).toList(); // Take the first two items from allItems
+    List<Map<String, dynamic>> topItems = allItems.take(2).toList();
+    print(topItems);
+    final String baseUrl = 'http://localhost:4000/';
 
     return GestureDetector(
       onTap: onPressed,
@@ -35,12 +37,14 @@ class SellerCard extends StatelessWidget {
                 topLeft: Radius.circular(10.0),
                 topRight: Radius.circular(10.0),
               ),
-              child: Image.network(
-                sellerPhotoUrl,
+              child: sellerPhotoUrl.isNotEmpty
+                  ? Image.network(
+                baseUrl + sellerPhotoUrl,
                 height: 200,
                 width: double.infinity,
                 fit: BoxFit.cover,
-              ),
+              )
+                  : Placeholder(), // Placeholder for null photo
             ),
             Padding(
               padding: EdgeInsets.all(15.0),
@@ -51,7 +55,7 @@ class SellerCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        sellerName,
+                        sellerName.isNotEmpty ? sellerName : 'Unknown', // Use 'Unknown' for null name
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18.0,
@@ -63,7 +67,9 @@ class SellerCard extends StatelessWidget {
                           Icon(Icons.star, color: Colors.yellow),
                           SizedBox(width: 5.0),
                           Text(
-                            sellerRating.toString(),
+                            sellerRating != null
+                                ? sellerRating.toString()
+                                : 'N/A', // Use 'N/A' for null rating
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16.0,
@@ -92,14 +98,16 @@ class SellerCard extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                item['name'],
+                                item['name'] ?? 'Unknown', // Use 'Unknown' for null name
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16.0,
                                 ),
                               ),
                               Text(
-                                '₹${item['price']}',
+                                item['price'] != null
+                                    ? '₹${item['price']}'
+                                    : 'N/A', // Use 'N/A' for null price
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16.0,
@@ -110,7 +118,7 @@ class SellerCard extends StatelessWidget {
                           ),
                           SizedBox(height: 5.0),
                           Text(
-                            item['description'],
+                            item['description'] ?? '', // Use empty string for null description
                             style: TextStyle(
                               fontSize: 14.0,
                               color: Colors.grey[700],

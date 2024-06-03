@@ -37,7 +37,7 @@ class _QuantitySelectorState extends State<QuantitySelector> {
     return GestureDetector(
       onTap: () => _increment(true), // Increment when tapped
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+        padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
         decoration: BoxDecoration(
           color: _quantity == 0 ? Colors.green : Colors.white,
           borderRadius: BorderRadius.circular(20.0),
@@ -53,19 +53,22 @@ class _QuantitySelectorState extends State<QuantitySelector> {
           ),
         )
             : Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             GestureDetector(
               onTap: () => _increment(false), // Decrement when tapped
               child: Icon(Icons.remove, size: 20.0, color: Colors.grey),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(
-                '$_quantity',
-                style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.bold, color: Colors.black),
+            SizedBox(width: 8.0),
+            Text(
+              '$_quantity',
+              style: TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
             ),
+            SizedBox(width: 8.0),
             GestureDetector(
               onTap: () => _increment(true), // Increment when tapped
               child: Icon(Icons.add, size: 20.0, color: Colors.grey),
