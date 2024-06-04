@@ -26,7 +26,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
   Future<void> _fetchItems() async {
     final APIService apiService = APIService();
     final phoneNumber = await _getPhoneNumber();
-    final items = await apiService.fetchItems(sellerPhone: phoneNumber);
+    final items = await apiService.fetchItems(context, sellerPhone: phoneNumber);
     final currentTime = DateTime.now();
     if (!mounted) return;
     setState(() {

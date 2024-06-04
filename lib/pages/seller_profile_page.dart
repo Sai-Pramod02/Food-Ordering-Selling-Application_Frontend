@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import ' api_service.dart';
 import 'package:food_buddies/components/communityDropdown.dart';
 import 'past_orders_page.dart';
+import 'renew_membership_page.dart'; // Import the renew membership page
+import 'package:intl/intl.dart'; // For date formatting
 
 class SellerProfile extends StatefulWidget {
   @override
@@ -17,6 +19,7 @@ class _SellerProfileState extends State<SellerProfile> {
   final TextEditingController _upiController = TextEditingController();
   String? _selectedCommunity;
   String? _selectedDeliveryType;
+  DateTime? _membershipEndDate;
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _SellerProfileState extends State<SellerProfile> {
       String community = prefs.getString('community') ?? '';
       _selectedCommunity = community;
       _selectedDeliveryType = profile['delivery_type'];
+      _membershipEndDate = DateTime.parse(profile['membership_end_date']);
     });
   }
 
@@ -44,7 +48,6 @@ class _SellerProfileState extends State<SellerProfile> {
     if (_formKey.currentState!.validate()) {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       String phone = prefs.getString('phoneNumber') ?? '';
-      print(_selectedDeliveryType);
       await APIService.updateSellerProfile(
         phone: phone,
         name: _nameController.text,
@@ -55,11 +58,38 @@ class _SellerProfileState extends State<SellerProfile> {
       );
       await prefs.setString('community', _selectedCommunity!);
 
-      // Reload the profile to ensure the UI reflects the latest data
       await _loadProfile();
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
     }
+  }
+
+  String _formatDate(DateTime date) {
+    final day = DateFormat('d').format(date);
+    final suffix = _getDayOfMonthSuffix(int.parse(day));
+    final formattedDate = DateFormat('d MMM yyyy').format(date);
+    return formattedDate.replaceFirst(RegExp(r'\d+'), '$day$suffix');
+  }
+
+  String _getDayOfMonthSuffix(int day) {
+    if (day >= 11 && day <= 13) {
+      return 'th';
+    }
+    switch (day % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  }
+
+  bool _isMembershipExpired() {
+    if (_membershipEndDate == null) return false;
+    return _membershipEndDate!.isBefore(DateTime.now());
   }
 
   @override
@@ -72,6 +102,55 @@ class _SellerProfileState extends State<SellerProfile> {
           key: _formKey,
           child: ListView(
             children: [
+              if (_isMembershipExpired())
+                Container(
+                  padding: EdgeInsets.all(16.0),
+                  margin: EdgeInsets.only(bottom: 20.0), // Add margin for better spacing
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.warning, color: Colors.red),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Your membership has expired. Please renew it to continue as a seller.',
+                              style: TextStyle(
+                                color: Colors.red.shade900,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white, backgroundColor: Colors.pink.shade300,
+                          textStyle: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => RenewMembershipPage()),
+                          );
+                        },
+                        child: Text('Renew Now'),
+                      ),
+                    ],
+                  ),
+                ),
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(labelText: 'Name'),
@@ -112,20 +191,21 @@ class _SellerProfileState extends State<SellerProfile> {
               DropdownButtonFormField<String>(
                 value: _selectedDeliveryType,
                 items: ['HOME DELIVERY', 'PICK UP'].map((String value) {
-
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
                   );
                 }).toList(),
                 onChanged: (newValue) {
-                  print(newValue);
                   setState(() {
                     _selectedDeliveryType = newValue;
                   });
                 },
                 decoration: InputDecoration(labelText: 'Delivery Type'),
               ),
+              SizedBox(height: 20),
+              if (_membershipEndDate != null && !_isMembershipExpired())
+                Text('Membership Active Till: ${_formatDate(_membershipEndDate!)}'),
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _updateProfile,
@@ -134,7 +214,8 @@ class _SellerProfileState extends State<SellerProfile> {
               SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white, backgroundColor: Colors.blue, // Text color
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.blue,
                   textStyle: TextStyle(fontSize: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),

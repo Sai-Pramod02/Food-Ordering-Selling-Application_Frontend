@@ -62,7 +62,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
           canvasColor: Colors.grey[900],
           primaryColor: Colors.red,
           textTheme: Theme.of(context).textTheme.copyWith(
-            caption: TextStyle(color: Colors.white),
+            bodySmall: TextStyle(color: Colors.white),
           ),
         ),
         child: BottomNavigationBar(

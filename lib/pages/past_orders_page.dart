@@ -36,7 +36,8 @@ class _PastOrdersPageState extends State<PastOrdersPage> with SingleTickerProvid
   }
 
   void _showOrderDetails(int orderId) async {
-    final orderItems = await APIService.getOrderItems(orderId);
+    final APIService apiService = APIService();
+    final orderItems = await apiService.getOrderItems(context, orderId);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

@@ -181,13 +181,25 @@ class _AddItemPageState extends State<AddItemPage> {
     if (dateTimeStr == null || dateTimeStr.isEmpty) {
       return '';
     }
-    final dateTime = DateFormat("yyyy-MM-ddTHH:mm:ssZ").parse(dateTimeStr, true);
-    if (dateTime == null) {
+    try {
+      DateFormat inputFormat;
+      if (dateTimeStr.contains('T')) {
+        // ISO 8601 format
+        inputFormat = DateFormat("yyyy-MM-ddTHH:mm:ssZ");
+      } else {
+        // EEE dd MMM hh:mma format
+        inputFormat = DateFormat("EEE dd MMM hh:mma");
+      }
+      final dateTime = inputFormat.parse(dateTimeStr);
+      final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      return formatter.format(dateTime);
+    } catch (e) {
+      print('Error parsing date/time string: $e');
       return '';
     }
-    final formatter = DateFormat('EEE dd MMM hh:mma');
-    return formatter.format(dateTime);
   }
+
+
 
   @override
   Widget build(BuildContext context) {

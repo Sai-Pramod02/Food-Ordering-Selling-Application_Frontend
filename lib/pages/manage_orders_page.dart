@@ -26,7 +26,7 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String phone = prefs.getString('phoneNumber') ?? '';
 
-    final orders = await apiService.getOrdersForSeller();
+    final orders = await apiService.getOrdersForSeller(context);
 
     setState(() {
       _activeOrders = orders.where((order) => order['order_delivered'] == 0).toList();
@@ -59,13 +59,15 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
   }
 
   void _markAsDelivered(int orderId) async {
-    await APIService.markOrderAsDelivered(orderId);
+    final APIService apiService = APIService();
+    await apiService.markOrderAsDelivered(context, orderId);
     _fetchOrders();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order marked as delivered')));
   }
 
   void _showOrderDetails(int orderId) async {
-    final orderItems = await APIService.getOrderItems(orderId);
+    final APIService apiService = APIService();
+    final orderItems = await apiService.getOrderItems(context, orderId);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -92,7 +94,8 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
   }
 
   void _updateDeliveryType(int orderId, String deliveryType) async {
-    await APIService.updateOrderDeliveryType(orderId, deliveryType);
+    final APIService apiService = APIService();
+    await apiService.updateOrderDeliveryType(context, orderId, deliveryType);
     _fetchOrders();
   }
 
