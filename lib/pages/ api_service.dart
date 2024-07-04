@@ -16,12 +16,13 @@ import 'config.dart';
 
 class APIService {
   static var client = http.Client();
+  static const String apiKey = "YOUR_MSG91_API_KEY";
 
   static Future<LoginResponseModel> otpLogin(String mobileNo) async {
     Map<String, String> requestHeaders = {
       'Content-Type': 'application/json',
     };
-    var url = Uri.http(Config.apiURL, Config.otpLoginAPI);
+    var url = Uri.http('34.16.177.102:4000', Config.otpLoginAPI);
 
     var response = await client.post(
       url,
@@ -31,17 +32,18 @@ class APIService {
 
     return loginResponseJson(response.body);
   }
+  static Future<String> getPhoneNumber() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('phoneNumber') ?? '';
+  }
 
   static Future<LoginResponseModel> verifyOtp(
-      String mobileNo,
-      String otpHash,
-      String otpCode,
-      ) async {
+      String mobileNo, String otpHash, String otpCode) async {
     Map<String, String> requestHeaders = {
       'Content-Type': 'application/json',
     };
 
-    var url = Uri.http(Config.apiURL, Config.verifyOTPAPI);
+    var url = Uri.http('34.16.177.102:4000', Config.verifyOTPAPI);
 
     var response = await client.post(
       url,
@@ -56,13 +58,13 @@ class APIService {
     Map<String, String> requestHeaders = {
       'Content-Type': 'application/json',
     };
-    var url = Uri.http('localhost:4000', '/buyers/by-community', {'community': community});
+    var url = Uri.http('34.16.177.102:4000', '/buyers/by-community', {'community': community});
 
     var response = await client.get(
       url,
       headers: requestHeaders,
     );
-  print(response.body);
+
     if (response.statusCode == 200) {
       Iterable jsonResponse = json.decode(response.body);
       List<SellerItemModel> sellersWithItems = jsonResponse
@@ -83,9 +85,8 @@ class APIService {
     File? image,
     required String community,
     required String deliveryType,
-
   }) async {
-    var url = Uri.http(Config.apiURL, Config.sellerRegistrationAPI);
+    var url = Uri.http('34.16.177.102:4000', Config.sellerRegistrationAPI);
 
     var request = http.MultipartRequest('POST', url);
     request.fields['seller_name'] = sellerName;
@@ -94,7 +95,7 @@ class APIService {
     request.fields['seller_upi'] = sellerUpi;
     request.fields['community'] = community;
     request.fields['delivery_type'] = deliveryType;
-    print(request.fields);
+
     if (image != null) {
       var stream = http.ByteStream(image.openRead());
       var length = await image.length();
@@ -113,19 +114,16 @@ class APIService {
       print('Failed to register seller');
     }
   }
-  static const String baseUrl = 'http://localhost:4000/';
-  static Future<String> getPhoneNumber() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('phoneNumber') ?? '';
-  }
-  Future<List<Map<String, dynamic>>> fetchItems(BuildContext context, {required String sellerPhone}) async {
+
+  static Future<List<Map<String, dynamic>>> fetchItems(BuildContext context,
+      {required String sellerPhone}) async {
     Map<String, String> requestHeaders = {
       'Content-Type': 'application/json',
     };
-    var url = Uri.http('localhost:4000', '/sellers/items', {'phone': sellerPhone});
+    var url = Uri.http('34.16.177.102:4000', '/sellers/items', {'phone': sellerPhone});
     var response = await client.get(
       url,
-      headers: requestHeaders
+      headers: requestHeaders,
     );
     await handleMembershipStatus(context, response);
     if (response.statusCode == 200) {
@@ -134,12 +132,15 @@ class APIService {
       throw Exception('Failed to load items');
     }
   }
+
   static Future<List<String>> fetchCommunities() async {
-    // Replace with your actual API endpoint
-    final response = await http.get(Uri.parse('http://localhost:4000/users/communities'));
+    final response =
+    await http.get(Uri.parse('http://34.16.177.102:4000/users/communities'));
     if (response.statusCode == 200) {
       List<dynamic> communities = jsonDecode(response.body);
-      return communities.map((community) => community['community_name'].toString()).toList();
+      return communities
+          .map((community) => community['community_name'].toString())
+          .toList();
     } else {
       throw Exception('Failed to load communities');
     }
@@ -153,7 +154,7 @@ class APIService {
     required String community,
   }) async {
     final response = await http.post(
-      Uri.parse('http://localhost:4000/buyers/register-buyer'),
+      Uri.parse('http://34.16.177.102:4000/buyers/register-buyer'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'buyer_name': buyerName,
@@ -169,9 +170,11 @@ class APIService {
         MaterialPageRoute(builder: (context) => BuyerHomePage()),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to register buyer')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to register buyer')));
     }
   }
+
   Future<void> addItem({
     required BuildContext context, // Add this line
     required String sellerPhone,
@@ -185,7 +188,7 @@ class APIService {
   }) async {
     try {
       final String phoneNumber = await getPhoneNumber();
-      var url = Uri.http(Config.apiURL, Config.addItemsAPI);
+      var url = Uri.http('34.16.177.102:4000', '/sellers/items', {'phone': phoneNumber});
 
       var request = http.MultipartRequest('POST', url);
       request.fields['seller_phone'] = phoneNumber;
@@ -224,6 +227,7 @@ class APIService {
       throw Exception('Failed to add item: $e');
     }
   }
+
   Future<void> updateItem({
     required BuildContext context,
     required int itemId,
@@ -237,10 +241,12 @@ class APIService {
   }) async {
     DateTime startDateTime = DateTime.parse(itemDelStartTimestamp);
     DateTime endDateTime = DateTime.parse(itemDelEndTimestamp);
-    String formattedStartDateTime = DateFormat('yyyy-MM-dd HH:mm:ss').format(startDateTime);
-    String formattedEndDateTime = DateFormat('yyyy-MM-dd HH:mm:ss').format(endDateTime);
+    String formattedStartDateTime =
+    DateFormat('yyyy-MM-dd HH:mm:ss').format(startDateTime);
+    String formattedEndDateTime =
+    DateFormat('yyyy-MM-dd HH:mm:ss').format(endDateTime);
     final String phoneNumber = await getPhoneNumber();
-    var url = Uri.http(Config.apiURL, '/sellers/updateItem/$itemId', {'phone': phoneNumber}); // Include itemId in the URL path
+    var url = Uri.http('34.16.177.102:4000', '/sellers/updateItem/$itemId', {'phone': phoneNumber}); // Include itemId in the URL path
     print(url);
     var request = http.MultipartRequest('POST', url);
     request.fields['item_name'] = itemName; // Use the same field names as expected by the backend
@@ -252,7 +258,8 @@ class APIService {
 
     if (itemPhoto != null) {
       request.files.add(
-        await http.MultipartFile.fromPath('item_photo', itemPhoto.path), // Use the same field name as expected by the backend
+        await http.MultipartFile.fromPath(
+            'item_photo', itemPhoto.path), // Use the same field name as expected by the backend
       );
     }
 
@@ -264,9 +271,9 @@ class APIService {
       throw Exception('Failed to update item');
     }
   }
-  static const String _baseUrl = 'http://localhost:4000';
+
   static Future<Map<String, dynamic>> getBuyerProfile(String phone) async {
-    final response = await http.get(Uri.parse('$_baseUrl/buyers/buyer/$phone'));
+    final response = await http.get(Uri.parse('http://34.16.177.102:4000/buyers/buyer/$phone'));
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -274,11 +281,16 @@ class APIService {
     }
   }
 
-  static Future<void> updateBuyerProfile({required String phone, required String name, required String address, required String community}) async {
+  static Future<void> updateBuyerProfile(
+      {required String phone,
+        required String name,
+        required String address,
+        required String community}) async {
     final response = await http.put(
-      Uri.parse('$_baseUrl/buyers/buyer/$phone'),
+      Uri.parse('http://34.16.177.102:4000/buyers/buyer/$phone'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'buyer_name': name, 'buyer_address': address, 'community': community}),
+      body: jsonEncode(
+          {'buyer_name': name, 'buyer_address': address, 'community': community}),
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to update buyer profile');
@@ -286,7 +298,7 @@ class APIService {
   }
 
   static Future<Map<String, dynamic>> getSellerProfile(String phone) async {
-    final response = await http.get(Uri.parse('$_baseUrl/sellers/seller/$phone'));
+    final response = await http.get(Uri.parse('http://34.16.177.102:4000/sellers/seller/$phone'));
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -294,22 +306,34 @@ class APIService {
     }
   }
 
-
-  static Future<void> updateSellerProfile({required String phone, required String name, required String address, required String upi, required String community, required String deliveryType}) async {
+  static Future<void> updateSellerProfile(
+      {required String phone,
+        required String name,
+        required String address,
+        required String upi,
+        required String community,
+        required String deliveryType}) async {
     print(deliveryType);
     final response = await http.put(
-      Uri.parse('$_baseUrl/sellers/seller/$phone'),
+      Uri.parse('http://34.16.177.102:4000/sellers/seller/$phone'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'seller_name': name, 'seller_address': address, 'seller_upi': upi, 'community': community, 'delivery_type' : deliveryType}),
+      body: jsonEncode({
+        'seller_name': name,
+        'seller_address': address,
+        'seller_upi': upi,
+        'community': community,
+        'delivery_type': deliveryType
+      }),
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to update seller profile');
     }
   }
-  static Future<void> placeOrder(
-      String buyerPhone, String sellerPhone, List<Map<String, dynamic>> items, String userType) async {
+
+  static Future<void> placeOrder(String buyerPhone, String sellerPhone,
+      List<Map<String, dynamic>> items, String userType) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/buyers/placeOrder?phone=$sellerPhone'),
+      Uri.parse('http://34.16.177.102:4000/buyers/placeOrder?phone=$sellerPhone'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         "buyer_phone": buyerPhone,
@@ -322,17 +346,22 @@ class APIService {
       throw Exception('Failed to place order');
     }
   }
+
   static Future<Map<String, dynamic>?> fetchItemDetails(String itemId) async {
-    final response = await http.get(Uri.parse('$_baseUrl/buyers/items/$itemId'));
+    final response = await http.get(
+        Uri.parse('http://34.16.177.102:4000/buyers/items/$itemId'));
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-       print(jsonDecode(response.body));
+      print(jsonDecode(response.body));
     }
   }
-   Future<List<Map<String, dynamic>>> getOrdersForSeller(BuildContext context) async {
+
+  Future<List<Map<String, dynamic>>> getOrdersForSeller(
+      BuildContext context) async {
     final String phoneNumber = await getPhoneNumber();
-    final response = await http.get(Uri.parse('$_baseUrl/sellers/orders/$phoneNumber?phone=$phoneNumber'));
+    final response =
+    await http.get(Uri.parse('http://34.16.177.102:4000/sellers/orders/$phoneNumber?phone=$phoneNumber'));
     await handleMembershipStatus(context, response);
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(json.decode(response.body));
@@ -341,19 +370,23 @@ class APIService {
     }
   }
 
-   Future<void> markOrderAsDelivered(BuildContext context, int orderId) async {
+  Future<void> markOrderAsDelivered(
+      BuildContext context, int orderId) async {
     final String phoneNumber = await getPhoneNumber();
-    final response = await http.put(Uri.parse('$_baseUrl/sellers/orders/$orderId/delivered?phone=$phoneNumber'));
+    final response = await http.put(
+        Uri.parse('http://34.16.177.102:4000/sellers/orders/$orderId/delivered?phone=$phoneNumber'));
     await handleMembershipStatus(context, response);
     if (response.statusCode != 200) {
       throw Exception('Failed to mark order as delivered');
     }
   }
 
-   Future<List<Map<String, dynamic>>> getOrderItems(BuildContext context, int orderId) async {
+  Future<List<Map<String, dynamic>>> getOrderItems(
+      BuildContext context, int orderId) async {
     final String phoneNumber = await getPhoneNumber();
-    final response = await http.get(Uri.parse('$_baseUrl/sellers/orders/items/$orderId?phone=$phoneNumber'));
-    await handleMembershipStatus(context as BuildContext, response);
+    final response =
+    await http.get(Uri.parse('http://34.16.177.102:4000/sellers/orders/items/$orderId?phone=$phoneNumber'));
+    await handleMembershipStatus(context, response);
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(json.decode(response.body));
     } else {
@@ -361,22 +394,27 @@ class APIService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getBuyerOrders(String buyerPhone) async {
-    final response = await http.get(Uri.parse('$_baseUrl/buyers/orders/$buyerPhone'));
+  static Future<List<Map<String, dynamic>>> getBuyerOrders(
+      String buyerPhone) async {
+    final response =
+    await http.get(Uri.parse('http://34.16.177.102:4000/buyers/orders/$buyerPhone'));
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(json.decode(response.body));
     } else {
       throw Exception('Failed to load buyer orders');
     }
   }
-   Future<bool> updateOrderDeliveryType(BuildContext context,int orderId, String deliveryType) async {
+
+  Future<bool> updateOrderDeliveryType(
+      BuildContext context, int orderId, String deliveryType) async {
     final String phoneNumber = await getPhoneNumber();
     final response = await http.post(
-      Uri.parse('$_baseUrl/sellers/orders/delivery-type/$orderId?phone=$phoneNumber'),
+      Uri.parse(
+          'http://34.16.177.102:4000/sellers/orders/delivery-type/$orderId?phone=$phoneNumber'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'delivery_type': deliveryType}),
     );
-    await handleMembershipStatus(context as BuildContext, response);
+    await handleMembershipStatus(context, response);
     if (response.statusCode == 200) {
       print("updated Successfully");
       return true;
@@ -384,7 +422,9 @@ class APIService {
       throw Exception('Failed to load buyer orders');
     }
   }
-  static Future<void> handleMembershipStatus(BuildContext context, http.Response response) async {
+
+  static Future<void> handleMembershipStatus(
+      BuildContext context, http.Response response) async {
     if (response.statusCode == 403) {
       Navigator.push(
         context,
@@ -394,6 +434,59 @@ class APIService {
       throw Exception('Failed to perform the operation');
     }
   }
+
+  static Future<List<Map<String, dynamic>>> getSellerReviews(
+      String sellerPhone) async {
+    print("request sent for getting seller reviews");
+    final response = await http
+        .get(Uri.parse('http://34.16.177.102:4000/sellers/reviews/$sellerPhone'));
+    if (response.statusCode == 200) {
+      List data = json.decode(response.body);
+      return data.map((item) => Map<String, dynamic>.from(item)).toList();
+    } else {
+      throw Exception('Failed to load reviews');
+    }
   }
 
+  static Future<bool> submitRatingAndReview(
+      {required int orderId,
+        required String sellerPhone,
+        required int rating,
+        required String review}) async {
+    print(orderId);
+    print(sellerPhone);
+    print(rating);
+    print(review);
+    final response = await http.post(
+      Uri.parse('http://34.16.177.102:4000/buyers/reviews/$orderId'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({
+        'seller_phone': sellerPhone,
+        'rating': rating, // Ensure rating is sent as an integer
+        'review': review,
+      }),
+    );
 
+    print("sent");
+    return response.statusCode == 200;
+  }
+
+  static Future<void> renewMembership(String phone, int month) async {
+    final response = await http.post(
+      Uri.parse('http://34.16.177.102:4000/sellers/renewMembership'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'phone': phone,
+        'months': month.toString(),
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to renew membership');
+    }
+  }
+}

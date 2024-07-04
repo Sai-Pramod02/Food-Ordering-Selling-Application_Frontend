@@ -27,8 +27,8 @@ class _PastOrdersPageState extends State<PastOrdersPage> with SingleTickerProvid
     try {
       final orders = await APIService.getBuyerOrders(widget.buyerPhone);
       setState(() {
-        activeOrders = orders.where((order) => order['order_delivered'] == 0).toList();
-        pastOrders = orders.where((order) => order['order_delivered'] == 1).toList();
+        activeOrders = orders.where((order) => order['order_delivered'] == 0).toList().reversed.toList();
+        pastOrders = orders.where((order) => order['order_delivered'] == 1).toList().reversed.toList();
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load orders: $e')));
@@ -89,7 +89,8 @@ class _PastOrdersPageState extends State<PastOrdersPage> with SingleTickerProvid
       itemCount: orders.length,
       itemBuilder: (context, index) {
         final order = orders[index];
-        print(order);
+        final orderReviewed = order['order_rating'] != null && order['order_review'] != null;
+
         return Card(
           margin: EdgeInsets.symmetric(vertical: 8.0),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -122,6 +123,52 @@ class _PastOrdersPageState extends State<PastOrdersPage> with SingleTickerProvid
                       color: isPast ? Colors.green : Colors.red,
                     ),
                   ),
+                  if (orderReviewed) ...[
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          'Your Rating: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                        ),
+                        Text(
+                          '${order['order_rating']}',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Review:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(order['order_review']),
+                  ],
+                  if (isPast && !orderReviewed)
+                    ElevatedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return RatingReviewDialog(
+                              orderId: order['order_id'],
+                              sellerPhone: order['seller_phone'],
+                            );
+                          },
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[900], // Background color
+                      ),
+                      child: Text(
+                        'Rate & Review',
+                        style: TextStyle(color: Colors.amber), // Text color
+                      ),
+                    ),
                   SizedBox(height: 8),
                   InkWell(
                     onTap: () {
@@ -170,6 +217,107 @@ class _PastOrdersPageState extends State<PastOrdersPage> with SingleTickerProvid
           ),
         );
       },
+    );
+  }
+}
+
+class RatingReviewDialog extends StatefulWidget {
+  final int orderId;
+  final String sellerPhone;
+
+  RatingReviewDialog({required this.orderId, required this.sellerPhone});
+
+  @override
+  _RatingReviewDialogState createState() => _RatingReviewDialogState();
+}
+
+class _RatingReviewDialogState extends State<RatingReviewDialog> {
+  int _rating = 3;
+  final _reviewController = TextEditingController();
+
+  void _submitReview() async {
+    final review = _reviewController.text;
+    if (review.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please write a review')));
+      return;
+    }
+
+    final success = await APIService.submitRatingAndReview(
+      orderId: widget.orderId,
+      sellerPhone: widget.sellerPhone,
+      rating: _rating,
+      review: review,
+    );
+
+    if (success) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Review submitted successfully')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to submit review')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.grey[900],
+      title: Text(
+        'Rate & Review',
+        style: TextStyle(color: Colors.white),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              return IconButton(
+                icon: Icon(
+                  index < _rating ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _rating = index + 1;
+                  });
+                },
+              );
+            }),
+          ),
+          SizedBox(height: 10),
+          TextField(
+            controller: _reviewController,
+            maxLines: 3,
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Write your review here',
+              hintStyle: TextStyle(color: Colors.white54),
+              filled: true,
+              fillColor: Colors.grey[800],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: Colors.amber),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _submitReview,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.amber, // Background color
+          ),
+          child: Text('Submit'),
+        ),
+      ],
     );
   }
 }

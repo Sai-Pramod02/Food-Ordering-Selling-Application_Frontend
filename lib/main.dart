@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:food_buddies/pages/buyer_registration_page.dart';
 import 'package:food_buddies/pages/login_otp_page.dart';
+import 'package:food_buddies/pages/renew_membership_page.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'package:food_buddies/models/cart_model.dart'; // Import Cart model
@@ -56,7 +58,7 @@ class MyApp extends StatelessWidget {
 
   Future<String> checkUserType() async {
     String userPhone = await getPhoneNumber(); // Get phone number from shared preferences
-    var url = Uri.http(Config.apiURL, Config.checkUserTypeAPI);
+    var url = Uri.http('34.16.177.102:4000', Config.checkUserTypeAPI);
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},

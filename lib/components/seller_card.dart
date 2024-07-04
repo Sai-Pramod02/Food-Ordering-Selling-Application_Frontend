@@ -6,20 +6,21 @@ class SellerCard extends StatelessWidget {
   final double sellerRating;
   final List<Map<String, dynamic>> allItems;
   final Function() onPressed;
-
+  final Function() onRatingPressed;
   SellerCard({
     required this.sellerName,
     required this.sellerPhotoUrl,
     required this.sellerRating,
     required this.allItems,
     required this.onPressed,
+    required this.onRatingPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> topItems = allItems.take(2).toList();
     print(topItems);
-    final String baseUrl = 'http://localhost:4000/';
+    final String baseUrl = 'http://34.16.177.102:4000/';
 
     return GestureDetector(
       onTap: onPressed,
@@ -66,13 +67,16 @@ class SellerCard extends StatelessWidget {
                         children: [
                           Icon(Icons.star, color: Colors.yellow),
                           SizedBox(width: 5.0),
-                          Text(
-                            sellerRating != null
-                                ? sellerRating.toString()
-                                : 'N/A', // Use 'N/A' for null rating
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16.0,
+                          InkWell(
+                            onTap: onRatingPressed,
+                            child: Text(
+                              sellerRating.toString(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16.0,
+                                decoration: TextDecoration.underline,
+                                color: Colors.blue,
+                              ),
                             ),
                           ),
                         ],

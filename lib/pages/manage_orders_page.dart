@@ -29,8 +29,8 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
     final orders = await apiService.getOrdersForSeller(context);
 
     setState(() {
-      _activeOrders = orders.where((order) => order['order_delivered'] == 0).toList();
-      _pastOrders = orders.where((order) => order['order_delivered'] == 1).toList();
+      _activeOrders = orders.where((order) => order['order_delivered'] == 0).toList().reversed.toList();
+      _pastOrders = orders.where((order) => order['order_delivered'] == 1).toList().reversed.toList();
 
       // Fetch and update delivery type for each order
       _activeOrders.forEach((order) async {

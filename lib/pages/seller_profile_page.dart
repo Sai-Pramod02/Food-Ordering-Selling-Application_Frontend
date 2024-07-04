@@ -232,6 +232,24 @@ class _SellerProfileState extends State<SellerProfile> {
                 },
                 child: Text('Your Orders'),
               ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.green,
+                  textStyle: TextStyle(fontSize: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => RenewMembershipPage()),
+                  );
+                },
+                child: Text('Renew Membership'),
+              ),
             ],
           ),
         ),

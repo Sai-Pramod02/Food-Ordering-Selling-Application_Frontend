@@ -41,7 +41,7 @@ class _AddItemPageState extends State<AddItemPage> {
       _itemDelStartTimestampController.text = _formatDateTime(widget.item!['item_del_start_timestamp']) ?? '';
       print("The start time is : " + widget.item!['item_del_start_timestamp']);
       _itemDelEndTimestampController.text = _formatDateTime(widget.item!['item_del_end_timestamp']) ?? '';
-      _existingImageUrl = APIService.baseUrl + (widget.item!['item_photo'] ?? '');
+      _existingImageUrl = 'http://34.16.177.102:4000/' + (widget.item!['item_photo'] ?? '');
     }
   }
 

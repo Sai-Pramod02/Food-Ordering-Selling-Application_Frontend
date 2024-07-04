@@ -1,4 +1,3 @@
-// community_dropdown.dart
 import 'package:flutter/material.dart';
 import 'package:food_buddies/pages/ api_service.dart';
 
@@ -26,7 +25,9 @@ class _CommunityDropdownState extends State<CommunityDropdown> {
     final communities = await APIService.fetchCommunities();
     setState(() {
       _communities = communities;
-      _selectedCommunity = widget.initialCommunity ?? (communities.isNotEmpty ? communities[0] : null);
+      _selectedCommunity = widget.initialCommunity != null && communities.contains(widget.initialCommunity)
+          ? widget.initialCommunity
+          : (communities.isNotEmpty ? communities[0] : null);
     });
   }
 
@@ -35,7 +36,9 @@ class _CommunityDropdownState extends State<CommunityDropdown> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialCommunity != oldWidget.initialCommunity) {
       setState(() {
-        _selectedCommunity = widget.initialCommunity;
+        _selectedCommunity = widget.initialCommunity != null && _communities.contains(widget.initialCommunity)
+            ? widget.initialCommunity
+            : (_communities.isNotEmpty ? _communities[0] : null);
       });
     }
   }

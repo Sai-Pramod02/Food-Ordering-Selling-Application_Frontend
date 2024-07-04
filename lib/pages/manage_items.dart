@@ -15,7 +15,7 @@ class ManageItemsPage extends StatefulWidget {
 class _ManageItemsPageState extends State<ManageItemsPage> {
   List<Map<String, dynamic>> activeItems = [];
   List<Map<String, dynamic>> pastItems = [];
-  final String baseUrl = 'http://localhost:4000/';
+  final String baseUrl = 'http://34.16.177.102:4000/';
   final String defaultImageUrl = 'https://i.imgur.com/bOCEVJg.png';
   @override
   void initState() {
@@ -26,7 +26,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
   Future<void> _fetchItems() async {
     final APIService apiService = APIService();
     final phoneNumber = await _getPhoneNumber();
-    final items = await apiService.fetchItems(context, sellerPhone: phoneNumber);
+    final items = await APIService.fetchItems(context, sellerPhone: phoneNumber);
     final currentTime = DateTime.now();
     if (!mounted) return;
     setState(() {
@@ -37,7 +37,6 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
       DateFormat("yyyy-MM-ddTHH:mm:ssZ").parse(item['item_del_end_timestamp'], true).isBefore(currentTime) ||
           item['item_quantity'] == 0).toList();
     });
-    print(activeItems);
   }
 
   Future<String> _getPhoneNumber() async {

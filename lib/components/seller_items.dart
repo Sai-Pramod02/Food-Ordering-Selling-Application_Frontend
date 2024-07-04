@@ -11,7 +11,7 @@ class SellerItemsList extends StatelessWidget {
 
   SellerItemsList({required this.items});
 
-  final String baseUrl = 'http://localhost:4000/';
+  final String baseUrl = 'http://34.16.177.102:4000/';
   final String defaultImageUrl = 'https://i.imgur.com/bOCEVJg.png';
 
   String _formatDateTime(String dateTimeStr) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:food_buddies/components/seller_card.dart';
 import 'package:food_buddies/components/seller_items.dart';
+import 'package:food_buddies/pages/seller_reviews_page.dart';
 import 'package:provider/provider.dart';
 import 'package:food_buddies/models/cart_model.dart';
 import 'package:food_buddies/pages/ api_service.dart';
@@ -27,7 +28,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       community = prefs.getString('community') ?? '';
-      print(community);
+      print("Your community is : "+community);
       List<SellerItemModel> fetchedSellers = await APIService.getSellersWithItems(community);
       setState(() {
         sellers = fetchedSellers;
@@ -36,6 +37,11 @@ class _HomePageState extends State<HomePage> {
       // Handle error
       print('Error fetching sellers with items: $e');
     }
+  }
+
+  static Future<String> getPhoneNumber() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('phoneNumber') ?? '';
   }
 
   @override
@@ -50,9 +56,7 @@ class _HomePageState extends State<HomePage> {
       ),
       body: sellers.isEmpty
           ? Center(
-        child: Text(
-          "There are no active sellers in your community"
-        ),
+        child: Text("There are no active sellers in your community"),
       )
           : ListView.builder(
         itemCount: sellers.length,
@@ -68,6 +72,14 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => SellerItemsList(items: seller.allItems),
+                ),
+              );
+            },
+            onRatingPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SellerReviewsPage(sellerPhone: seller.sellerPhone), // Pass the phone number
                 ),
               );
             },
