@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:food_buddies/pages/ api_service.dart';
 
 class CommunityDropdown extends StatefulWidget {
-  final String? initialCommunity;
+  final String? initialCommunity; // Allow initialCommunity to be nullable
   final void Function(String?) onChanged;
 
   CommunityDropdown({this.initialCommunity, required this.onChanged});
@@ -18,17 +18,23 @@ class _CommunityDropdownState extends State<CommunityDropdown> {
   @override
   void initState() {
     super.initState();
+    // Initialize _selectedCommunity in initState if initialCommunity is not null
+    _selectedCommunity = widget.initialCommunity;
+    print('initState: _selectedCommunity = $_selectedCommunity');
+    // Fetch communities
     _fetchCommunities();
   }
 
-  Future<void> _fetchCommunities() async {
-    final communities = await APIService.fetchCommunities();
-    setState(() {
-      _communities = communities;
-      _selectedCommunity = widget.initialCommunity != null && communities.contains(widget.initialCommunity)
-          ? widget.initialCommunity
-          : (communities.isNotEmpty ? communities[0] : null);
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update _selectedCommunity in didChangeDependencies if initialCommunity changes
+    if (widget.initialCommunity != _selectedCommunity) {
+      setState(() {
+        _selectedCommunity = widget.initialCommunity;
+      });
+      print('didChangeDependencies: _selectedCommunity updated to $_selectedCommunity');
+    }
   }
 
   @override
@@ -36,11 +42,20 @@ class _CommunityDropdownState extends State<CommunityDropdown> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialCommunity != oldWidget.initialCommunity) {
       setState(() {
-        _selectedCommunity = widget.initialCommunity != null && _communities.contains(widget.initialCommunity)
-            ? widget.initialCommunity
-            : (_communities.isNotEmpty ? _communities[0] : null);
+        _selectedCommunity = widget.initialCommunity;
       });
+      print('didUpdateWidget: _selectedCommunity updated to $_selectedCommunity');
     }
+  }
+
+  Future<void> _fetchCommunities() async {
+    final communities = await APIService.fetchCommunities();
+    setState(() {
+      _communities = communities;
+      if (_selectedCommunity != null && !_communities.contains(_selectedCommunity)) {
+        _selectedCommunity = null; // Reset to null if initial community is not in fetched communities
+      }
+    });
   }
 
   @override

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:food_buddies/pages/ api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:flutter/services.dart'; // For Clipboard
+import 'package:fluttertoast/fluttertoast.dart'; // For Toast messages
 import 'package:animated_text_kit/animated_text_kit.dart';
 
 class ManageOrdersPage extends StatefulWidget {
@@ -29,20 +30,25 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
     final orders = await apiService.getOrdersForSeller(context);
 
     setState(() {
-      _activeOrders = orders.where((order) => order['order_delivered'] == 0).toList().reversed.toList();
-      _pastOrders = orders.where((order) => order['order_delivered'] == 1).toList().reversed.toList();
+      _activeOrders = orders
+          .where((order) => order['order_delivered'] == 0 && order['order_cancelled'] != 1)
+          .toList()
+          .reversed
+          .toList();
+      _pastOrders = orders
+          .where((order) => order['order_delivered'] == 1 || order['order_cancelled'] == 1)
+          .toList()
+          .reversed
+          .toList();
 
-      // Fetch and update delivery type for each order
       _activeOrders.forEach((order) async {
         if (order['delivery_type'] == null) {
-          // If order's delivery type is not set, fetch from seller profile
           order['delivery_type'] = _sellerDeliveryType;
         }
       });
 
       _pastOrders.forEach((order) async {
         if (order['delivery_type'] == null) {
-          // If order's delivery type is not set, fetch from seller profile
           order['delivery_type'] = _sellerDeliveryType;
         }
       });
@@ -62,7 +68,9 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
     final APIService apiService = APIService();
     await apiService.markOrderAsDelivered(context, orderId);
     _fetchOrders();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order marked as delivered')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Order marked as delivered')),
+    );
   }
 
   void _showOrderDetails(int orderId) async {
@@ -78,7 +86,7 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
             children: orderItems.map((item) {
               return ListTile(
                 title: Text(item['item_name']),
-                subtitle: Text('Price: \$${item['item_price']} Quantity: ${item['item_quantity']}'),
+                subtitle: Text('Price: \₹${item['item_price']} Quantity: ${item['item_quantity']}'),
               );
             }).toList(),
           ),
@@ -97,6 +105,22 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
     final APIService apiService = APIService();
     await apiService.updateOrderDeliveryType(context, orderId, deliveryType);
     _fetchOrders();
+  }
+
+  void _cancelOrder(int orderId) async {
+    final APIService apiService = APIService();
+    await apiService.cancelOrder(context, orderId);
+
+    setState(() {
+      var cancelledOrder = _activeOrders.firstWhere((order) => order['order_id'] == orderId);
+      cancelledOrder['order_cancelled'] = 1; // Update status to cancelled
+      _pastOrders.insert(0, cancelledOrder);
+      _activeOrders.removeWhere((order) => order['order_id'] == orderId);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Order cancelled successfully')),
+    );
   }
 
   @override
@@ -137,6 +161,8 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
       itemBuilder: (context, index) {
         final order = orders[index];
         bool isHomeDelivery = order['delivery_type'] == 'HOME DELIVERY';
+        bool isCancelled = order['order_cancelled'] == 1;
+
         return Card(
           margin: EdgeInsets.symmetric(vertical: 8.0),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -152,11 +178,14 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        order['buyer_name'],
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: Text(
+                          order['buyer_name'],
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      if (!isPast)
+                      if (!isPast && !isCancelled) ...[
                         ElevatedButton(
                           onPressed: () => _markAsDelivered(order['order_id']),
                           style: ElevatedButton.styleFrom(
@@ -166,12 +195,13 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
                           ),
                           child: Text('Mark Delivered', style: TextStyle(fontSize: 15)),
                         ),
+                      ],
                     ],
                   ),
                   SizedBox(height: 8),
                   Text('Address: ${order['buyer_address']}'),
-                  Text('Total Price: \$${order['order_total_price']}'),
-                  if (!isPast) ...[
+                  Text('Total Price: \₹${order['order_total_price']}'),
+                  if (!isPast && !isCancelled) ...[
                     SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -194,45 +224,93 @@ class _ManageOrdersPageState extends State<ManageOrdersPage> {
                       ],
                     ),
                     SizedBox(height: 8),
-                    InkWell(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (context) {
-                            return Container(
-                              padding: EdgeInsets.all(16.0),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('Buyer Phone Number', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                  SizedBox(height: 10),
-                                  AnimatedTextKit(
-                                    animatedTexts: [
-                                      TypewriterAnimatedText(
-                                        order['buyer_phone'],
-                                        textStyle: TextStyle(fontSize: 16, color: Colors.black),
-                                        speed: Duration(milliseconds: 100),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              builder: (context) {
+                                return Container(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Buyer Phone Number',
+                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                      ),
+                                      SizedBox(height: 10),
+                                      AnimatedTextKit(
+                                        animatedTexts: [
+                                          TypewriterAnimatedText(
+                                            order['buyer_phone'],
+                                            textStyle: TextStyle(fontSize: 16, color: Colors.black),
+                                            speed: Duration(milliseconds: 100),
+                                          ),
+                                        ],
+                                        totalRepeatCount: 1,
+                                      ),
+                                      SizedBox(height: 10),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          ElevatedButton.icon(
+                                            onPressed: () {
+                                              Clipboard.setData(ClipboardData(text: order['buyer_phone']));
+                                              Fluttertoast.showToast(
+                                                msg: "Phone number copied to clipboard",
+                                                toastLength: Toast.LENGTH_SHORT,
+                                                gravity: ToastGravity.BOTTOM,
+                                                timeInSecForIosWeb: 1,
+                                                backgroundColor: Colors.green,
+                                                textColor: Colors.white,
+                                                fontSize: 16.0,
+                                              );
+                                              Navigator.pop(context);
+                                            },
+                                            icon: Icon(Icons.copy),
+                                            label: Text('Copy Number'),
+                                            style: ElevatedButton.styleFrom(
+                                              foregroundColor: Colors.white, backgroundColor: Colors.green,
+                                            ),
+                                          ),
+                                          SizedBox(width: 10),
+                                          ElevatedButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: Text('Close'),
+                                            style: ElevatedButton.styleFrom(
+                                              foregroundColor: Colors.white, backgroundColor: Colors.red,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
-                                    totalRepeatCount: 1,
                                   ),
-                                  SizedBox(height: 10),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text('Close', style: TextStyle(color: Theme.of(context).primaryColor)),
-                                  ),
-                                ],
-                              ),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(
-                          'Contact Buyer',
-                          style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 16, decoration: TextDecoration.underline),
+                          child: Row(
+                            children: [
+                              Icon(Icons.copy, color: Colors.grey),
+                              SizedBox(width: 5),
+                              Text('Contact Seller', style: TextStyle(color: Colors.purple,fontSize: 16, decoration: TextDecoration.underline)),
+                            ],
+                          ),
                         ),
+                      ],
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: () => _cancelOrder(order['order_id']),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white, backgroundColor: Colors.red, // Text color
+                          minimumSize: Size(110, 50), // Adjust button size as needed
+                        ),
+                        child: Text('Cancel Order', style: TextStyle(fontSize: 15)),
                       ),
                     ),
                   ],

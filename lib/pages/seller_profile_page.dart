@@ -5,6 +5,7 @@ import 'package:food_buddies/components/communityDropdown.dart';
 import 'past_orders_page.dart';
 import 'renew_membership_page.dart'; // Import the renew membership page
 import 'package:intl/intl.dart'; // For date formatting
+import 'login_otp_page.dart'; // Import the login page
 
 class SellerProfile extends StatefulWidget {
   @override
@@ -39,6 +40,7 @@ class _SellerProfileState extends State<SellerProfile> {
       _upiController.text = profile['seller_upi'];
       String community = prefs.getString('community') ?? '';
       _selectedCommunity = community;
+      print("Selected community : "+ _selectedCommunity!);
       _selectedDeliveryType = profile['delivery_type'];
       _membershipEndDate = DateTime.parse(profile['membership_end_date']);
     });
@@ -57,11 +59,21 @@ class _SellerProfileState extends State<SellerProfile> {
         deliveryType: _selectedDeliveryType!,
       );
       await prefs.setString('community', _selectedCommunity!);
-
       await _loadProfile();
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
     }
+  }
+
+  Future<void> _logout() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('phoneNumber');
+    await prefs.remove('community');
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => loginOTPPage()),
+          (route) => false,
+    );
   }
 
   String _formatDate(DateTime date) {
@@ -249,6 +261,20 @@ class _SellerProfileState extends State<SellerProfile> {
                   );
                 },
                 child: Text('Renew Membership'),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.red,
+                  textStyle: TextStyle(fontSize: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                ),
+                onPressed: _logout,
+                child: Text('Logout'),
               ),
             ],
           ),

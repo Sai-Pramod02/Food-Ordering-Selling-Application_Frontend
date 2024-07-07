@@ -85,7 +85,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
   }
 
   String _formatDateTime(String dateTimeStr) {
-    final dateTime = DateFormat("yyyy-MM-ddTHH:mm:ssZ").parse(dateTimeStr, true);
+    final dateTime = DateTime.parse(dateTimeStr);
     final formatter = DateFormat('EEE dd MMM hh:mma');
     return formatter.format(dateTime);
   }

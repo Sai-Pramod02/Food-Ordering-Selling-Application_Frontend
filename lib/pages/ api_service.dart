@@ -85,6 +85,7 @@ class APIService {
     File? image,
     required String community,
     required String deliveryType,
+    required int membershipDuration,
   }) async {
     var url = Uri.http('34.16.177.102:4000', Config.sellerRegistrationAPI);
 
@@ -95,12 +96,12 @@ class APIService {
     request.fields['seller_upi'] = sellerUpi;
     request.fields['community'] = community;
     request.fields['delivery_type'] = deliveryType;
+    request.fields['membership_duration'] = membershipDuration.toString();
 
     if (image != null) {
       var stream = http.ByteStream(image.openRead());
       var length = await image.length();
-      var multipartFile = http.MultipartFile('image', stream, length,
-          filename: basename(image.path));
+      var multipartFile = http.MultipartFile('image', stream, length, filename: basename(image.path));
       request.files.add(multipartFile);
     }
 
@@ -212,10 +213,11 @@ class APIService {
       }
       var response = await request.send();
       var responseBody = await http.Response.fromStream(response);
-
+      print(response.statusCode);
       await handleMembershipStatus(context, responseBody);
 
       if (response.statusCode == 201) {
+
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => SellerHomePage()),
@@ -224,7 +226,7 @@ class APIService {
         throw Exception('Failed to add item');
       }
     } catch (e) {
-      throw Exception('Failed to add item: $e');
+      throw Exception(' $e');
     }
   }
 
@@ -430,8 +432,8 @@ class APIService {
         context,
         MaterialPageRoute(builder: (context) => MembershipDialog()),
       );
-    } else if (response.statusCode != 200) {
-      throw Exception('Failed to perform the operation');
+    } else if (response.statusCode != 200 || response.statusCode != 201) {
+      print("Response status code" + response.statusCode.toString());
     }
   }
 
@@ -489,4 +491,10 @@ class APIService {
       throw Exception('Failed to renew membership');
     }
   }
-}
+  Future<void> cancelOrder(BuildContext context, int orderId) async {
+    final url = Uri.parse('http://34.16.177.102:4000/sellers/orders/cancel/$orderId');
+    final response = await http.put(url);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to cancel order');
+    }
+}}

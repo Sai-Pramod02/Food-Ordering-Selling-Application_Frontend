@@ -65,12 +65,16 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('phoneNumber', phoneNumber);
     }
+  void storeCommunity(String community) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('community', community);
+  }
   Future<String> getPhoneNumber() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String phoneNumber = prefs.getString('phoneNumber') ?? '';
     return phoneNumber;
   }
-  Future<String> checkUserType() async {
+  Future<Map<String, dynamic>> checkUserType() async {
     String userPhone = await getPhoneNumber(); // Get phone number from shared preferences
     var url = Uri.http(Config.apiURL, Config.checkUserTypeAPI);
     final response = await http.post(
@@ -81,11 +85,15 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
     print(response.body);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return data['userType'];
+      return {
+        'userType': data['userType'],
+        'community': data['community'],
+      };
     } else {
       throw Exception('Failed to check user type');
     }
   }
+
 
 
 
@@ -176,13 +184,17 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
                     storePhoneNumber(widget.mobileNo!);
 
                     // Check user type and navigate to the appropriate page
-                    checkUserType().then((userType) {
+                    checkUserType().then((result) async {
+                      String userType = result['userType'];
+                      String community = result['community'];
                       if (userType == 'buyer') {
+                         storeCommunity(community);
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (context) => BuyerHomePage()),
                         );
                       } else if (userType == 'seller') {
+                         storeCommunity(community);
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (context) => SellerHomePage()),

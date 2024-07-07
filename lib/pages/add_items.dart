@@ -126,6 +126,7 @@ class _AddItemPageState extends State<AddItemPage> {
             itemDelEndTimestamp: _itemDelEndTimestampController.text,
             itemPhoto: imageFile,
           );
+          Navigator.pop(context);
         } else {
           // Update existing item
           await apiService.updateItem(
@@ -140,10 +141,11 @@ class _AddItemPageState extends State<AddItemPage> {
             itemPhoto: imageFile,
           );
         }
-        if (!mounted) return;
         Navigator.pop(context);
+
       } catch (e) {
-        print('Error saving item: $e');
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to update item')));
       }
     }
   }

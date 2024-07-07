@@ -1,7 +1,6 @@
-// buyer_registration.dart
 import 'package:flutter/material.dart';
-import 'package:food_buddies/pages/ api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:food_buddies/pages/ api_service.dart';
 import 'package:food_buddies/components/communityDropdown.dart';
 
 class BuyerRegistration extends StatefulWidget {
@@ -29,6 +28,12 @@ class _BuyerRegistrationState extends State<BuyerRegistration> {
 
   Future<void> registerBuyer() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedCommunity == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please select a community')),
+        );
+        return;
+      }
       await APIService.registerBuyer(
         context: context,
         buyerName: _nameController.text,
@@ -89,7 +94,6 @@ class _BuyerRegistrationState extends State<BuyerRegistration> {
                 },
               ),
               CommunityDropdown(
-                initialCommunity: _selectedCommunity,
                 onChanged: (newValue) {
                   setState(() {
                     _selectedCommunity = newValue;

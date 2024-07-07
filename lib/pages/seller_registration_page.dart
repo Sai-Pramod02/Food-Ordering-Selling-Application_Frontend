@@ -1,10 +1,11 @@
-// seller_registration.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:food_buddies/pages/ api_service.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:food_buddies/pages/ api_service.dart';
 import 'package:food_buddies/components/communityDropdown.dart';
 
 class SellerRegistration extends StatefulWidget {
@@ -22,11 +23,39 @@ class _SellerRegistrationState extends State<SellerRegistration> {
   String? _selectedCommunity;
   String _deliveryType = 'HOME DELIVERY';
   final picker = ImagePicker();
+  late Razorpay _razorpay;
+  int _selectedOption = 1; // Default to 1 month
+
+  Map<int, int> _options = {
+    1: 400,
+    3: 900,
+    6: 1200,
+    12: 1800,
+  };
 
   @override
   void initState() {
     super.initState();
-    getPhoneNumber().then((value) => _phoneController.text = value);
+    getPhoneNumber().then((value) {
+      setState(() {
+        _phoneController.text = value;
+      });
+    });
+    _initializeRazorpay();
+  }
+
+  void _initializeRazorpay() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
   }
 
   Future<void> pickImage() async {
@@ -62,7 +91,6 @@ class _SellerRegistrationState extends State<SellerRegistration> {
   }
 
   Future<void> registerSeller() async {
-    print(_deliveryType);
     if (_formKey.currentState!.validate()) {
       await APIService.registerSeller(
         context: context,
@@ -73,7 +101,7 @@ class _SellerRegistrationState extends State<SellerRegistration> {
         image: _image,
         community: _selectedCommunity!,
         deliveryType: _deliveryType,
-
+        membershipDuration: _selectedOption,
       );
       await storeCommunity(_selectedCommunity!);
     }
@@ -82,6 +110,42 @@ class _SellerRegistrationState extends State<SellerRegistration> {
   Future<String> getPhoneNumber() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString('phoneNumber') ?? '';
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    Fluttertoast.showToast(msg: "Payment Success");
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Payment successful'),
+    ));
+    await registerSeller(); // Call registerSeller method on successful payment
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    Fluttertoast.showToast(msg: "Payment Failed");
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('External wallet selected')));
+  }
+
+  void _openCheckout() async {
+    var options = {
+      'key': 'rzp_test_d15RxnRWKBC4rm',
+      'amount': _options[_selectedOption]! * 100, // amount in paise
+      'name': 'Food Buddies',
+      'description': 'Seller Membership',
+      'prefill': {
+        'contact': '8639133665',
+        'email': 'ravivammi@gmail.com',
+      }
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      print(e.toString());
+    }
   }
 
   @override
@@ -170,9 +234,23 @@ class _SellerRegistrationState extends State<SellerRegistration> {
                 decoration: InputDecoration(labelText: 'Delivery Type'),
               ),
               SizedBox(height: 20),
+              Column(
+                children: _options.keys.map((int months) {
+                  return RadioListTile(
+                    title: Text('$months month(s) - ₹${_options[months]}'),
+                    value: months,
+                    groupValue: _selectedOption,
+                    onChanged: (int? value) {
+                      setState(() {
+                        _selectedOption = value!;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
               ElevatedButton(
-                onPressed: registerSeller,
-                child: Text('Register'),
+                onPressed: _openCheckout,
+                child: Text('Proceed to checkout'),
               ),
             ],
           ),

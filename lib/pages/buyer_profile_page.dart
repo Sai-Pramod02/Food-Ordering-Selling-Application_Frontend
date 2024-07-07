@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_buddies/pages/ api_service.dart';
 import 'package:food_buddies/components/communityDropdown.dart';
 
+import 'login_otp_page.dart';
+
 class BuyerProfile extends StatefulWidget {
   @override
   _BuyerProfileState createState() => _BuyerProfileState();
@@ -55,7 +57,16 @@ class _BuyerProfileState extends State<BuyerProfile> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
     }
   }
-
+  Future<void> _logout() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('phoneNumber');
+    await prefs.remove('community');
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => loginOTPPage()),
+          (route) => false,
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,6 +110,20 @@ class _BuyerProfileState extends State<BuyerProfile> {
               ElevatedButton(
                 onPressed: _updateProfile,
                 child: Text('Update Profile'),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.red,
+                  textStyle: TextStyle(fontSize: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                ),
+                onPressed: _logout,
+                child: Text('Logout'),
               ),
             ],
           ),

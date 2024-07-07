@@ -34,7 +34,7 @@ class _SellerHomePageState extends State<SellerHomePage> {
   void _checkMembershipStatus() async {
     final phone = await APIService.getPhoneNumber();
     try {
-      final response = await http.get(Uri.parse('http://localhost:4000/sellers/membershipStatus?phone=$phone')); // Corrected URL
+      final response = await http.get(Uri.parse('http://34.16.177.102:4000/sellers/membershipStatus?phone=$phone')); // Corrected URL
       if (response.statusCode == 403) {
         // Membership expired, show dialog and update state
         setState(() {
@@ -68,52 +68,58 @@ class _SellerHomePageState extends State<SellerHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Colors.blue, Colors.red],
+    return WillPopScope(
+      onWillPop: () async {
+        return false; // Disable the back button
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [Colors.blue, Colors.red],
+            ),
           ),
+          child: _getCurrentPage(_currentIndex),
         ),
-        child: _getCurrentPage(_currentIndex),
-      ),
-      bottomNavigationBar: Theme(
-        data: Theme.of(context).copyWith(
-          // sets the background color of the `BottomNavigationBar`
-          canvasColor: Colors.grey[900],
-          // sets the active color of the `BottomNavigationBar` if `Brightness` is light
-          primaryColor: Colors.red,
-          textTheme: Theme.of(context).textTheme.copyWith(
-            bodySmall: TextStyle(color: Colors.white),
+        bottomNavigationBar: Theme(
+          data: Theme.of(context).copyWith(
+            // sets the background color of the `BottomNavigationBar`
+            canvasColor: Colors.grey[900],
+            // sets the active color of the `BottomNavigationBar` if `Brightness` is light
+            primaryColor: Colors.red,
+            textTheme: Theme.of(context).textTheme.copyWith(
+              bodySmall: TextStyle(color: Colors.white),
+            ),
           ),
-        ),
-        child: BottomNavigationBar(
-          onTap: onTabTapped,
-          currentIndex: _currentIndex,
-          items: [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.list),
-              label: 'Manage Items',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart),
-              label: 'Manage Orders',
-            ),
-          ],
+          child: BottomNavigationBar(
+            onTap: onTabTapped,
+            currentIndex: _currentIndex,
+            items: [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.list),
+                label: 'Manage Items',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.shopping_cart),
+                label: 'Manage Orders',
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
 
   Widget _getCurrentPage(int index) {
     if (!_isMembershipActive && (index == 0 || index == 3)) {
