@@ -63,7 +63,7 @@ class _CommunityDropdownState extends State<CommunityDropdown> {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(labelText: 'Community'),
       value: _selectedCommunity,
-      items: _communities.map((String community) {
+      items: _communities.toSet().map((String community) {
         return DropdownMenuItem<String>(
           value: community,
           child: Text(community),

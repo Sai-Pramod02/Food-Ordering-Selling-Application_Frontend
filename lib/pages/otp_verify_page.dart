@@ -186,14 +186,16 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
                     // Check user type and navigate to the appropriate page
                     checkUserType().then((result) async {
                       String userType = result['userType'];
-                      String community = result['community'];
+
                       if (userType == 'buyer') {
+                        String community = result['community'];
                          storeCommunity(community);
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (context) => BuyerHomePage()),
                         );
                       } else if (userType == 'seller') {
+                        String community = result['community'];
                          storeCommunity(community);
                         Navigator.pushReplacement(
                           context,
