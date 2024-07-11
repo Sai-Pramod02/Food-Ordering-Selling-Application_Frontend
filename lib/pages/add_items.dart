@@ -13,7 +13,6 @@ class AddItemPage extends StatefulWidget {
   final Map<String, dynamic>? item;
 
   AddItemPage({this.item});
-
   @override
   _AddItemPageState createState() => _AddItemPageState();
 }
@@ -26,6 +25,7 @@ class _AddItemPageState extends State<AddItemPage> {
   final _itemPriceController = TextEditingController();
   final _itemDelStartTimestampController = TextEditingController();
   final _itemDelEndTimestampController = TextEditingController();
+  final _orderEndDateController = TextEditingController();
   File? _itemImage;
   final picker = ImagePicker();
   String? _existingImageUrl;
@@ -39,8 +39,8 @@ class _AddItemPageState extends State<AddItemPage> {
       _itemQuantityController.text = widget.item!['item_quantity'].toString() ?? '';
       _itemPriceController.text = widget.item!['item_price'].toString() ?? '';
       _itemDelStartTimestampController.text = _formatDateTime(widget.item!['item_del_start_timestamp']) ?? '';
-      print("The start time is : " + widget.item!['item_del_start_timestamp']);
       _itemDelEndTimestampController.text = _formatDateTime(widget.item!['item_del_end_timestamp']) ?? '';
+      _orderEndDateController.text = _formatDateTime(widget.item!['order_end_date']) ?? '';
       _existingImageUrl = 'http://34.16.177.102:4000/' + (widget.item!['item_photo'] ?? '');
     }
   }
@@ -53,6 +53,7 @@ class _AddItemPageState extends State<AddItemPage> {
     _itemPriceController.dispose();
     _itemDelStartTimestampController.dispose();
     _itemDelEndTimestampController.dispose();
+    _orderEndDateController.dispose();
     super.dispose();
   }
 
@@ -113,6 +114,17 @@ class _AddItemPageState extends State<AddItemPage> {
           imageFile = await _getImageFileFromUrl(_existingImageUrl!);
         }
 
+        String orderEndDate = _orderEndDateController.text.isEmpty
+            ? _itemDelEndTimestampController.text
+            : _orderEndDateController.text;
+
+        // Validate that orderEndDate is not greater than itemDelEndTimestamp
+        if (DateTime.parse(orderEndDate).isAfter(DateTime.parse(_itemDelEndTimestampController.text))) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Order end date cannot be greater than delivery end timestamp')));
+          return;
+        }
+
         if (widget.item == null || widget.item!['item_id'] == null) {
           // Create a new item
           await apiService.addItem(
@@ -124,6 +136,7 @@ class _AddItemPageState extends State<AddItemPage> {
             itemPrice: _itemPriceController.text,
             itemDelStartTimestamp: _itemDelStartTimestampController.text,
             itemDelEndTimestamp: _itemDelEndTimestampController.text,
+            orderEndDate: orderEndDate,
             itemPhoto: imageFile,
           );
           Navigator.pop(context);
@@ -138,6 +151,7 @@ class _AddItemPageState extends State<AddItemPage> {
             itemPrice: _itemPriceController.text,
             itemDelStartTimestamp: _itemDelStartTimestampController.text,
             itemDelEndTimestamp: _itemDelEndTimestampController.text,
+            orderEndDate: orderEndDate,
             itemPhoto: imageFile,
           );
         }
@@ -201,8 +215,6 @@ class _AddItemPageState extends State<AddItemPage> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -252,10 +264,7 @@ class _AddItemPageState extends State<AddItemPage> {
               TextFormField(
                 controller: _itemPriceController,
                 decoration: InputDecoration(labelText: 'Item Price'),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))
-                ],
+                keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter the item price';
@@ -266,7 +275,7 @@ class _AddItemPageState extends State<AddItemPage> {
               TextFormField(
                 controller: _itemDelStartTimestampController,
                 decoration: InputDecoration(
-                  labelText: 'Delivery Start Timestamp',
+                  labelText: 'Delivery Start Time',
                   suffixIcon: IconButton(
                     icon: Icon(Icons.calendar_today),
                     onPressed: () => _selectDateTime(_itemDelStartTimestampController),
@@ -275,7 +284,7 @@ class _AddItemPageState extends State<AddItemPage> {
                 readOnly: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter the delivery start time';
+                    return 'Please select the delivery start time';
                   }
                   return null;
                 },
@@ -283,7 +292,7 @@ class _AddItemPageState extends State<AddItemPage> {
               TextFormField(
                 controller: _itemDelEndTimestampController,
                 decoration: InputDecoration(
-                  labelText: 'Delivery End Timestamp',
+                  labelText: 'Delivery End Time',
                   suffixIcon: IconButton(
                     icon: Icon(Icons.calendar_today),
                     onPressed: () => _selectDateTime(_itemDelEndTimestampController),
@@ -292,31 +301,36 @@ class _AddItemPageState extends State<AddItemPage> {
                 readOnly: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter the delivery end time';
-                  }
-                  DateTime? startDateTime = DateTime.tryParse(_itemDelStartTimestampController.text);
-                  DateTime? endDateTime = DateTime.tryParse(value);
-                  if (startDateTime != null && endDateTime != null &&
-                      (endDateTime.isBefore(startDateTime) || endDateTime.isBefore(DateTime.now()) || endDateTime == startDateTime)) {
-                    return 'Ensure that it is always after delivery start time and current time';
+                    return 'Please select the delivery end time';
                   }
                   return null;
                 },
               ),
-              SizedBox(height: 20),
-              _itemImage == null
-                  ? _existingImageUrl != null
-                  ? Image.network(_existingImageUrl!)
-                  : Text('No image selected.')
-                  : Image.file(_itemImage!),
-              ElevatedButton(
-                onPressed: _pickImage,
-                child: Text('Pick Image'),
+              TextFormField(
+                controller: _orderEndDateController,
+                decoration: InputDecoration(
+                  labelText: 'Order End Date',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.calendar_today),
+                    onPressed: () => _selectDateTime(_orderEndDateController),
+                  ),
+                ),
+                readOnly: true,
               ),
+              SizedBox(height: 20),
+              TextButton(
+                onPressed: _pickImage,
+                child: Text('Select Image'),
+              ),
+              _itemImage != null
+                  ? Image.file(_itemImage!, height: 200)
+                  : _existingImageUrl != null
+                  ? Image.network(_existingImageUrl!, height: 200)
+                  : Container(),
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveItem,
-                child: Text(widget.item == null ? 'Add Item' : 'Save Changes'),
+                child: Text('Save Item'),
               ),
             ],
           ),

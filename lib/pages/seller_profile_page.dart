@@ -239,7 +239,7 @@ class _SellerProfileState extends State<SellerProfile> {
                   String phoneNumber = prefs.getString('phoneNumber') ?? '';
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => PastOrdersPage(buyerPhone: phoneNumber)),
+                    MaterialPageRoute(builder: (context) => PastOrdersPage()),
                   );
                 },
                 child: Text('Your Orders'),

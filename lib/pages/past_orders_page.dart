@@ -3,11 +3,9 @@ import 'package:flutter/services.dart'; // For Clipboard
 import 'package:fluttertoast/fluttertoast.dart'; // For Toast messages
 import 'package:food_buddies/pages/ api_service.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PastOrdersPage extends StatefulWidget {
-  final String buyerPhone;
-
-  PastOrdersPage({required this.buyerPhone});
 
   @override
   _PastOrdersPageState createState() => _PastOrdersPageState();
@@ -17,7 +15,7 @@ class _PastOrdersPageState extends State<PastOrdersPage> with SingleTickerProvid
   late TabController _tabController;
   List activeOrders = [];
   List pastOrders = [];
-
+  String? phoneNumber;
   @override
   void initState() {
     super.initState();
@@ -27,7 +25,9 @@ class _PastOrdersPageState extends State<PastOrdersPage> with SingleTickerProvid
 
   Future<void> _loadOrders() async {
     try {
-      final orders = await APIService.getBuyerOrders(widget.buyerPhone);
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      phoneNumber = prefs.getString('phoneNumber') ?? '';
+      final orders = await APIService.getBuyerOrders(phoneNumber!);
       setState(() {
         activeOrders = orders
             .where((order) =>

@@ -17,6 +17,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
   List<Map<String, dynamic>> pastItems = [];
   final String baseUrl = 'http://34.16.177.102:4000/';
   final String defaultImageUrl = 'https://i.imgur.com/bOCEVJg.png';
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +29,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
     final phoneNumber = await _getPhoneNumber();
     final items = await APIService.fetchItems(context, sellerPhone: phoneNumber);
     final currentTime = DateTime.now();
+    print(items);
     if (!mounted) return;
     setState(() {
       activeItems = items.where((item) =>
@@ -61,12 +63,14 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
       itemPrice: item['item_price'].toString(),
       itemDelStartTimestamp: item['item_del_start_timestamp'],
       itemDelEndTimestamp: DateTime.now().toIso8601String(),
+      orderEndDate: DateTime.now().toIso8601String(),
       itemPhoto: null,
     );
     _fetchItems();
   }
 
   void _navigateToAddItemPage({Map<String, dynamic>? item}) {
+    print(item);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -89,7 +93,6 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
     final formatter = DateFormat('EEE dd MMM hh:mma');
     return formatter.format(dateTime);
   }
-
 
   bool _isClosingSoon(String endTimestamp) {
     final endTime = DateTime.parse(endTimestamp);
@@ -155,6 +158,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
     final String startDate = _formatDateTime(item['item_del_start_timestamp']);
     final String endDate = _formatDateTime(item['item_del_end_timestamp']);
     final bool closingSoon = _isClosingSoon(item['item_del_end_timestamp']);
+    final String? orderEnd = item['order_end_date'] != null ? _formatDateTime(item['order_end_date']) : null;
 
     return Card(
       elevation: 2.0,
@@ -216,6 +220,14 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      if (orderEnd != null)
+                        Text(
+                          'Order End: $orderEnd',
+                          style: TextStyle(
+                            fontSize: 14.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       if (closingSoon && isActive)
                         Text(
                           'Closing Soon',

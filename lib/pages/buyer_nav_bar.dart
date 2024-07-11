@@ -13,14 +13,19 @@ class BuyerHomePage extends StatefulWidget {
 class _BuyerHomePageState extends State<BuyerHomePage> {
   int _currentIndex = 0;
   String? phoneNumber;
-  late List<Widget> _children;
+
 
   @override
   void initState() {
     super.initState();
     _loadPhoneNumber();
   }
-
+  late List<Widget> _children = [
+    HomePage(), // Placeholder for Home page
+    BuyerProfile(), // Placeholder for Profile page
+    PastOrdersPage(), // Placeholder for Past Orders page
+    SellerRegistration(), // Seller registration page
+  ];
   Future<void> _loadPhoneNumber() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -28,7 +33,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
       _children = [
         HomePage(), // Placeholder for Home page
         BuyerProfile(), // Placeholder for Profile page
-        PastOrdersPage(buyerPhone: phoneNumber!), // Placeholder for Past Orders page
+        PastOrdersPage(), // Placeholder for Past Orders page
         SellerRegistration(), // Seller registration page
       ];
     });

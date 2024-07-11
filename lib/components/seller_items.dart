@@ -55,6 +55,7 @@ class SellerItemsList extends StatelessWidget {
               final initialQuantity = cart.getQuantity(item['item_id']);
               final startDate = _formatDateTime(item['item_del_start_timestamp']);
               final endDate = _formatDateTime(item['item_del_end_timestamp']);
+              final orderendDate = _formatDateTime(item['order_end_date']);
               final closingSoon = _isClosingSoon(item['item_del_end_timestamp']);
 
               return Card(
@@ -115,7 +116,23 @@ class SellerItemsList extends StatelessWidget {
                             ),
                             SizedBox(height: 8.0),
                             Text(
-                              '$startDate - $endDate',
+                              'Taking orders till -  $orderendDate',
+                              style: TextStyle(
+                                fontSize: 14.0,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 8.0),
+                            Text(
+                              'Start : $startDate',
+                              style: TextStyle(
+                                fontSize: 14.0,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 8.0),
+                            Text(
+                              'End : $endDate',
                               style: TextStyle(
                                 fontSize: 14.0,
                                 fontWeight: FontWeight.bold,

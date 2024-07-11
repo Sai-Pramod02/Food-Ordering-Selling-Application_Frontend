@@ -17,6 +17,8 @@ class SellerHomePage extends StatefulWidget {
 class _SellerHomePageState extends State<SellerHomePage> {
   int _currentIndex = 0;
   bool _isMembershipActive = true; // State variable to track membership status
+  bool _isLoading = true; // State variable to track loading status
+  bool _hasError = false; // State variable to track error status
 
   final List<Widget> _children = [
     ManageItemsPage(), // ManageItems page (conditionally displayed)
@@ -39,19 +41,31 @@ class _SellerHomePageState extends State<SellerHomePage> {
         // Membership expired, show dialog and update state
         setState(() {
           _isMembershipActive = false;
+          _isLoading = false;
         });
         _showMembershipDialog();
       } else if (response.statusCode == 200) {
-        // Additional check for confirmation (assuming a confirmation endpoint exists)
-          print("Membership Confirmed - Active");
-          setState(() {
-            _isMembershipActive = true;
-          });
+        // Membership active, update state
+        setState(() {
+          _isMembershipActive = true;
+          _isLoading = false;
+        });
+      } else {
+        // Handle unexpected status codes
+        setState(() {
+          _hasError = true;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       print('Error checking membership status: $e');
+      setState(() {
+        _hasError = true;
+        _isLoading = false;
+      });
     }
   }
+
   void onTabTapped(int index) {
     _checkMembershipStatus(); // Check membership status when a new tab is selected
     setState(() {
@@ -66,6 +80,14 @@ class _SellerHomePageState extends State<SellerHomePage> {
     );
   }
 
+  void _retry() {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+    _checkMembershipStatus();
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -73,7 +95,11 @@ class _SellerHomePageState extends State<SellerHomePage> {
         return false; // Disable the back button
       },
       child: Scaffold(
-        body: Container(
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : _hasError
+            ? _buildErrorContent()
+            : Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topRight,
@@ -85,9 +111,7 @@ class _SellerHomePageState extends State<SellerHomePage> {
         ),
         bottomNavigationBar: Theme(
           data: Theme.of(context).copyWith(
-            // sets the background color of the `BottomNavigationBar`
             canvasColor: Colors.grey[900],
-            // sets the active color of the `BottomNavigationBar` if `Brightness` is light
             primaryColor: Colors.red,
             textTheme: Theme.of(context).textTheme.copyWith(
               bodySmall: TextStyle(color: Colors.white),
@@ -95,6 +119,7 @@ class _SellerHomePageState extends State<SellerHomePage> {
           ),
           child: BottomNavigationBar(
             onTap: onTabTapped,
+            type: BottomNavigationBarType.fixed,
             currentIndex: _currentIndex,
             items: [
               BottomNavigationBarItem(
@@ -114,12 +139,34 @@ class _SellerHomePageState extends State<SellerHomePage> {
                 label: 'Manage Orders',
               ),
             ],
+            selectedItemColor: Colors.orange,
+            unselectedItemColor: Colors.white,
+            backgroundColor: Colors.grey[900],
           ),
         ),
       ),
     );
   }
 
+  Widget _buildErrorContent() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error, size: 50, color: Colors.red),
+          Text(
+            'There is some issue with the connection.\nPlease wait for a while and try again.',
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _retry,
+            child: Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _getCurrentPage(int index) {
     if (!_isMembershipActive && (index == 0 || index == 3)) {
@@ -127,7 +174,6 @@ class _SellerHomePageState extends State<SellerHomePage> {
     }
     return _children[index];
   }
-
 }
 
 class PlaceholderWidget extends StatelessWidget {
@@ -162,4 +208,3 @@ class LockedContent extends StatelessWidget {
     );
   }
 }
-

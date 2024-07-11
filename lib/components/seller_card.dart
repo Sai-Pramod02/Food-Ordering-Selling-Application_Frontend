@@ -45,7 +45,12 @@ class SellerCard extends StatelessWidget {
                 width: double.infinity,
                 fit: BoxFit.cover,
               )
-                  : Placeholder(), // Placeholder for null photo
+                  : Image.network(
+                'https://i.imgur.com/bOCEVJg.png',
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ), // Placeholder for null photo
             ),
             Padding(
               padding: EdgeInsets.all(15.0),

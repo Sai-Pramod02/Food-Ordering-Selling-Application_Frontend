@@ -130,21 +130,30 @@ class _SellerRegistrationState extends State<SellerRegistration> {
   }
 
   void _openCheckout() async {
-    var options = {
-      'key': 'rzp_test_d15RxnRWKBC4rm',
-      'amount': _options[_selectedOption]! * 100, // amount in paise
-      'name': 'Food Buddies',
-      'description': 'Seller Membership',
-      'prefill': {
-        'contact': '8639133665',
-        'email': 'ravivammi@gmail.com',
+    if (_formKey.currentState!.validate()) {
+      if (_selectedCommunity == null) {
+        Fluttertoast.showToast(msg: "Please select a community");
+        return;
       }
-    };
 
-    try {
-      _razorpay.open(options);
-    } catch (e) {
-      print(e.toString());
+      var options = {
+        'key': 'rzp_test_d15RxnRWKBC4rm',
+        'amount': _options[_selectedOption]! * 100, // amount in paise
+        'name': 'Food Buddies',
+        'description': 'Seller Membership',
+        'prefill': {
+          'contact': '8639133665',
+          'email': 'ravivammi@gmail.com',
+        }
+      };
+
+      try {
+        _razorpay.open(options);
+      } catch (e) {
+        print(e.toString());
+      }
+    } else {
+      Fluttertoast.showToast(msg: "Please fill all the fields");
     }
   }
 

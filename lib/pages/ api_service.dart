@@ -185,6 +185,7 @@ class APIService {
     required String itemPrice,
     required String itemDelStartTimestamp,
     required String itemDelEndTimestamp,
+    required String orderEndDate,
     required File? itemPhoto,
   }) async {
     try {
@@ -199,6 +200,7 @@ class APIService {
       request.fields['item_price'] = itemPrice;
       request.fields['item_del_start_timestamp'] = itemDelStartTimestamp;
       request.fields['item_del_end_timestamp'] = itemDelEndTimestamp;
+      request.fields['order_end_date'] = orderEndDate;
 
       if (itemPhoto != null) {
         var stream = http.ByteStream(itemPhoto.openRead());
@@ -239,6 +241,7 @@ class APIService {
     required String itemPrice,
     required String itemDelStartTimestamp,
     required String itemDelEndTimestamp,
+    required String orderEndDate,
     File? itemPhoto,
   }) async {
     DateTime startDateTime = DateTime.parse(itemDelStartTimestamp);
@@ -257,6 +260,7 @@ class APIService {
     request.fields['item_price'] = itemPrice;
     request.fields['item_del_start_timestamp'] = formattedStartDateTime;
     request.fields['item_del_end_timestamp'] = formattedEndDateTime;
+    request.fields['order_end_date'] = orderEndDate;
 
     if (itemPhoto != null) {
       request.files.add(
