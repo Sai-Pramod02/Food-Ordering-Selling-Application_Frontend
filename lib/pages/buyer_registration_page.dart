@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_buddies/pages/ api_service.dart';
 import 'package:food_buddies/components/communityDropdown.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class BuyerRegistration extends StatefulWidget {
   @override
@@ -34,20 +35,27 @@ class _BuyerRegistrationState extends State<BuyerRegistration> {
         );
         return;
       }
+      String? playerId = await getPlayerId();
       await APIService.registerBuyer(
         context: context,
         buyerName: _nameController.text,
         buyerPhone: _phoneController.text,
         buyerAddress: _addressController.text,
         community: _selectedCommunity!,
+        playerId: playerId!,
       );
-      await storeCommunity(_selectedCommunity!);  // Store community after successful registration
+      await storeCommunity(_selectedCommunity!);
     }
   }
 
   Future<String> getPhoneNumber() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString('phoneNumber') ?? '';
+  }
+
+  Future<String?> getPlayerId() async {
+    var status = await OneSignal.shared.getDeviceState();
+    return status?.userId;
   }
 
   @override

@@ -1,9 +1,7 @@
-// buyer_profile.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_buddies/pages/ api_service.dart';
 import 'package:food_buddies/components/communityDropdown.dart';
-
 import 'login_otp_page.dart';
 
 class BuyerProfile extends StatefulWidget {
@@ -51,12 +49,13 @@ class _BuyerProfileState extends State<BuyerProfile> {
       );
       await prefs.setString('community', _selectedCommunity!);
 
-      // Reload the profile to ensure the UI reflects the latest data
       await _loadProfile();
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profile updated successfully')),
+      );
     }
   }
+
   Future<void> _logout() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('phoneNumber');
@@ -67,66 +66,151 @@ class _BuyerProfileState extends State<BuyerProfile> {
           (route) => false,
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Buyer Profile')),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(labelText: 'Name'),
-                validator: (value) {
-                  if (value!.isEmpty) return 'Please enter your name';
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _phoneController,
-                decoration: InputDecoration(labelText: 'Phone'),
-                enabled: false,
-              ),
-              TextFormField(
-                controller: _addressController,
-                decoration: InputDecoration(labelText: 'Address'),
-                validator: (value) {
-                  if (value!.isEmpty) return 'Please enter your address';
-                  return null;
-                },
-              ),
-              CommunityDropdown(
-                initialCommunity: _selectedCommunity,
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedCommunity = newValue;
-                  });
-                },
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _updateProfile,
-                child: Text('Update Profile'),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.red,
-                  textStyle: TextStyle(fontSize: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+      backgroundColor: Colors.grey[200],
+      appBar: AppBar(
+        title: Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.orange,
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProfileHeader(),
+                SizedBox(height: 30),
+                _buildTextField(
+                  controller: _nameController,
+                  labelText: 'Name',
+                  icon: Icons.person,
+                  validator: (value) {
+                    if (value!.isEmpty) return 'Please enter your name';
+                    return null;
+                  },
                 ),
-                onPressed: _logout,
-                child: Text('Logout'),
-              ),
-            ],
+                SizedBox(height: 20),
+                _buildTextField(
+                  controller: _phoneController,
+                  labelText: 'Phone',
+                  icon: Icons.phone,
+                  enabled: false,
+                ),
+                SizedBox(height: 20),
+                _buildTextField(
+                  controller: _addressController,
+                  labelText: 'Address',
+                  icon: Icons.home,
+                  validator: (value) {
+                    if (value!.isEmpty) return 'Please enter your address';
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                _buildCommunityDropdown(),
+                SizedBox(height: 30),
+                _buildUpdateButton(),
+                SizedBox(height: 20),
+                _buildLogoutButton(),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircleAvatar(
+          radius: 50,
+          backgroundImage: AssetImage('assets/logo.png'),
+        ),
+        SizedBox(width: 20),
+        Text(
+          'Welcome,',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required IconData icon,
+    bool enabled = true,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: TextStyle(color: Colors.black),
+        prefixIcon: Icon(icon, color: Colors.orange),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.orange),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      validator: validator,
+      enabled: enabled,
+    );
+  }
+
+  Widget _buildCommunityDropdown() {
+    return CommunityDropdown(
+      initialCommunity: _selectedCommunity,
+      onChanged: (newValue) {
+        setState(() {
+          _selectedCommunity = newValue;
+        });
+      },
+    );
+  }
+
+  Widget _buildUpdateButton() {
+    return ElevatedButton(
+      onPressed: _updateProfile,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.orange,
+        padding: EdgeInsets.symmetric(vertical: 15),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 5,
+      ),
+      child: Center(
+        child: Text(
+          'Update Profile',
+          style: TextStyle(fontSize: 18, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return ElevatedButton(
+      onPressed: _logout,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red,
+        padding: EdgeInsets.symmetric(vertical: 15),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 5,
+      ),
+      child: Center(
+        child: Text(
+          'Logout',
+          style: TextStyle(fontSize: 18, color: Colors.white),
         ),
       ),
     );

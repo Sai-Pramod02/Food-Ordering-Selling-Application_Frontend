@@ -86,6 +86,7 @@ class APIService {
     required String community,
     required String deliveryType,
     required int membershipDuration,
+    required String sellerFssai,
   }) async {
     var url = Uri.http('34.16.177.102:4000', Config.sellerRegistrationAPI);
 
@@ -97,6 +98,7 @@ class APIService {
     request.fields['community'] = community;
     request.fields['delivery_type'] = deliveryType;
     request.fields['membership_duration'] = membershipDuration.toString();
+    request.fields['seller_fssai'] = sellerFssai;
 
     if (image != null) {
       var stream = http.ByteStream(image.openRead());
@@ -153,6 +155,7 @@ class APIService {
     required String buyerPhone,
     required String buyerAddress,
     required String community,
+    required String playerId,
   }) async {
     final response = await http.post(
       Uri.parse('http://34.16.177.102:4000/buyers/register-buyer'),
@@ -162,6 +165,7 @@ class APIService {
         'buyer_phone': buyerPhone,
         'buyer_address': buyerAddress,
         'community': community,
+        "player_id": playerId,
       }),
     );
 
@@ -336,8 +340,7 @@ class APIService {
     }
   }
 
-  static Future<void> placeOrder(String buyerPhone, String sellerPhone,
-      List<Map<String, dynamic>> items, String userType) async {
+  static Future<http.Response> placeOrder(String buyerPhone, String sellerPhone, List<Map<String, dynamic>> items, String userType) async {
     final response = await http.post(
       Uri.parse('http://34.16.177.102:4000/buyers/placeOrder?phone=$sellerPhone'),
       headers: {'Content-Type': 'application/json'},
@@ -351,6 +354,7 @@ class APIService {
     if (response.statusCode != 200) {
       throw Exception('Failed to place order');
     }
+    return response;
   }
 
   static Future<Map<String, dynamic>?> fetchItemDetails(String itemId) async {
@@ -376,8 +380,7 @@ class APIService {
     }
   }
 
-  Future<void> markOrderAsDelivered(
-      BuildContext context, int orderId) async {
+  Future<Map<String, dynamic>> markOrderAsDelivered(BuildContext context, int orderId) async {
     final String phoneNumber = await getPhoneNumber();
     final response = await http.put(
         Uri.parse('http://34.16.177.102:4000/sellers/orders/$orderId/delivered?phone=$phoneNumber'));
@@ -385,8 +388,9 @@ class APIService {
     if (response.statusCode != 200) {
       throw Exception('Failed to mark order as delivered');
     }
-  }
 
+    return jsonDecode(response.body);
+  }
   Future<List<Map<String, dynamic>>> getOrderItems(
       BuildContext context, int orderId) async {
     final String phoneNumber = await getPhoneNumber();
@@ -410,22 +414,19 @@ class APIService {
       throw Exception('Failed to load buyer orders');
     }
   }
-
-  Future<bool> updateOrderDeliveryType(
+  Future<Map<String, dynamic>> updateOrderDeliveryType(
       BuildContext context, int orderId, String deliveryType) async {
     final String phoneNumber = await getPhoneNumber();
     final response = await http.post(
-      Uri.parse(
-          'http://34.16.177.102:4000/sellers/orders/delivery-type/$orderId?phone=$phoneNumber'),
+      Uri.parse('http://34.16.177.102:4000/sellers/orders/delivery-type/$orderId?phone=$phoneNumber'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'delivery_type': deliveryType}),
     );
     await handleMembershipStatus(context, response);
     if (response.statusCode == 200) {
-      print("updated Successfully");
-      return true;
+      return json.decode(response.body);
     } else {
-      throw Exception('Failed to load buyer orders');
+      throw Exception('Failed to update delivery type');
     }
   }
 
@@ -495,10 +496,66 @@ class APIService {
       throw Exception('Failed to renew membership');
     }
   }
-  Future<void> cancelOrder(BuildContext context, int orderId) async {
+  static Future<http.Response> cancelOrder(BuildContext context, int orderId) async {
     final url = Uri.parse('http://34.16.177.102:4000/sellers/orders/cancel/$orderId');
-    final response = await http.put(url);
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "order_id": orderId
+      }),
+    );
+    return response;
+  }
+  static Future<http.Response> updateOrderStatus(String orderId) async {
+    var url = Uri.http(Config.apiURL, '/buyers/orderStatus');
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "order_id": orderId,
+        "order_completed": 1
+      }),
+    );
+    return response;
+  }
+  Future<void> sendNotificationToDevice(List<String> playerIds, String message) async {
+      var url = Uri.http('34.16.177.102:4000', '/SendNotificationToDevice');
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "devices": playerIds,
+        "message": message,
+      }),
+    );
+
     if (response.statusCode != 200) {
-      throw Exception('Failed to cancel order');
+      throw Exception('Failed to send notification');
     }
-}}
+  }
+  static Future<http.Response> updateCancellationPaymentStatus(BuildContext context, int orderId, bool status) async {
+    var url = Uri.http(Config.apiURL, 'sellers/orders/updateCancellationPaymentStatus');
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "order_id": orderId,
+        "cancellation_payment_status": status ? 1 : 0,
+      }),
+    );
+    return response;
+  }
+  static Future<List<Map<String, dynamic>>> getSellerItems(String sellerPhone) async {
+    final url = Uri.parse('http://34.16.177.102:4000/buyers/items?sellerPhone=$sellerPhone'); // Adjust endpoint as needed
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = json.decode(response.body);
+      return data.map((item) => item as Map<String, dynamic>).toList();
+    } else {
+      throw Exception('Failed to fetch seller items');
+    }
+  }
+}
+

@@ -26,6 +26,7 @@ class SellerCard extends StatelessWidget {
       onTap: onPressed,
       child: Card(
         elevation: 2.0,
+        color: Colors.orange[100],
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10.0),
         ),
@@ -70,7 +71,7 @@ class SellerCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.star, color: Colors.yellow),
+                          Icon(Icons.star, color: Colors.orange[800]),
                           SizedBox(width: 5.0),
                           InkWell(
                             onTap: onRatingPressed,

@@ -7,6 +7,7 @@ import 'package:food_buddies/models/cart_model.dart';
 import 'package:food_buddies/pages/ api_service.dart';
 import 'package:food_buddies/models/seller_item_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../components/loadingComponent.dart';
 import 'cart_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -17,6 +18,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<SellerItemModel> sellers = [];
   late String community;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -28,14 +30,18 @@ class _HomePageState extends State<HomePage> {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       community = prefs.getString('community') ?? '';
-      print("Your community is : "+community);
+      print("Your community is : " + community);
       List<SellerItemModel> fetchedSellers = await APIService.getSellersWithItems(community);
       setState(() {
         sellers = fetchedSellers;
+        _isLoading = false;
       });
     } catch (e) {
       // Handle error
       print('Error fetching sellers with items: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -54,7 +60,9 @@ class _HomePageState extends State<HomePage> {
         title: Text('Home'),
         automaticallyImplyLeading: false,
       ),
-      body: sellers.isEmpty
+      body: _isLoading
+          ? LoadingComponent() // Show loading component while fetching data
+          : sellers.isEmpty
           ? Center(
         child: Text("There are no active sellers in your community"),
       )
@@ -71,7 +79,11 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => SellerItemsList(items: seller.allItems),
+                  builder: (context) => SellerItemsList(
+                    initialItems: seller.allItems,
+                    fssai_code: seller.fssai_code,
+                    sellerPhone: seller.sellerPhone,
+                  ),
                 ),
               );
             },

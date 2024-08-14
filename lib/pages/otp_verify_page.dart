@@ -76,7 +76,7 @@ class _OTPVerifyPageState extends State<OTPVerifyPage> {
   }
   Future<Map<String, dynamic>> checkUserType() async {
     String userPhone = await getPhoneNumber(); // Get phone number from shared preferences
-    var url = Uri.http(Config.apiURL, Config.checkUserTypeAPI);
+    var url = Uri.http(Config.apiURL, '/users/check-user-type-withoutplayerid');
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},

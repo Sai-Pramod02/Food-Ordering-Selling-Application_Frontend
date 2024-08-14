@@ -47,10 +47,11 @@ class _QuantitySelectorState extends State<QuantitySelector> {
             ? Text(
           'Add+',
           style: TextStyle(
-            fontSize: 14.0,
+            fontSize: 20.0,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
+
         )
             : Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

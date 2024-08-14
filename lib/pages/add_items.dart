@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/services.dart';
-import 'package:food_buddies/pages/ api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import ' api_service.dart';
 
 class AddItemPage extends StatefulWidget {
   final Map<String, dynamic>? item;
@@ -60,7 +61,7 @@ class _AddItemPageState extends State<AddItemPage> {
   Future<void> _pickImage() async {
     var status = await Permission.storage.status;
     if (!status.isGranted) {
-      if (await Permission.storage.request().isGranted) {
+      if (await Permission.photos.request().isGranted) {
         final pickedFile = await picker.pickImage(source: ImageSource.gallery);
         setState(() {
           if (pickedFile != null) {
@@ -70,7 +71,7 @@ class _AddItemPageState extends State<AddItemPage> {
           }
         });
       } else {
-        print('Storage permission denied');
+        print('Images permission denied');
       }
     } else {
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -88,7 +89,6 @@ class _AddItemPageState extends State<AddItemPage> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString('phoneNumber') ?? '';
   }
-
   Future<File?> _getImageFileFromUrl(String imageUrl) async {
     try {
       final response = await HttpClient().getUrl(Uri.parse(imageUrl));
@@ -124,7 +124,12 @@ class _AddItemPageState extends State<AddItemPage> {
               .showSnackBar(SnackBar(content: Text('Order end date cannot be greater than delivery end timestamp')));
           return;
         }
-
+        // Validate that orderEndDate is not equal to or before current time
+        if (DateTime.parse(orderEndDate).isBefore(DateTime.now())) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Order end date cannot be set to current time or earlier')));
+          return;
+        }
         if (widget.item == null || widget.item!['item_id'] == null) {
           // Create a new item
           await apiService.addItem(
@@ -156,7 +161,6 @@ class _AddItemPageState extends State<AddItemPage> {
           );
         }
         Navigator.pop(context);
-
       } catch (e) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Failed to update item')));
@@ -170,6 +174,20 @@ class _AddItemPageState extends State<AddItemPage> {
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.orange,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
     );
     if (pickedDate != null) {
       TimeOfDay? pickedTime = await showTimePicker(
@@ -185,7 +203,6 @@ class _AddItemPageState extends State<AddItemPage> {
           pickedTime.hour,
           pickedTime.minute,
         );
-
         setState(() {
           controller.text = DateFormat('yyyy-MM-dd HH:mm').format(fullDateTime);
         });
@@ -198,17 +215,8 @@ class _AddItemPageState extends State<AddItemPage> {
       return '';
     }
     try {
-      DateFormat inputFormat;
-      if (dateTimeStr.contains('T')) {
-        // ISO 8601 format
-        inputFormat = DateFormat("yyyy-MM-ddTHH:mm:ssZ");
-      } else {
-        // EEE dd MMM hh:mma format
-        inputFormat = DateFormat("EEE dd MMM hh:mma");
-      }
-      final dateTime = inputFormat.parse(dateTimeStr);
-      final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-      return formatter.format(dateTime);
+      final dateTime = DateFormat("yyyy-MM-ddTHH:mm:ssZ").parse(dateTimeStr);
+      return DateFormat('yyyy-MM-dd HH:mm:ss').format(dateTime);
     } catch (e) {
       print('Error parsing date/time string: $e');
       return '';
@@ -220,6 +228,7 @@ class _AddItemPageState extends State<AddItemPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.item == null ? 'Add New Item' : 'Edit Item'),
+        backgroundColor: Colors.orange,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -227,110 +236,175 @@ class _AddItemPageState extends State<AddItemPage> {
           key: _formKey,
           child: ListView(
             children: <Widget>[
-              TextFormField(
-                controller: _itemNameController,
-                decoration: InputDecoration(labelText: 'Item Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the item name';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _itemDescController,
-                decoration: InputDecoration(labelText: 'Item Description'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the item description';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _itemQuantityController,
-                decoration: InputDecoration(labelText: 'Item Quantity'),
-                keyboardType: TextInputType.number,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.digitsOnly
-                ],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the item quantity';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _itemPriceController,
-                decoration: InputDecoration(labelText: 'Item Price'),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the item price';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _itemDelStartTimestampController,
-                decoration: InputDecoration(
-                  labelText: 'Delivery Start Time',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.calendar_today),
-                    onPressed: () => _selectDateTime(_itemDelStartTimestampController),
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _itemNameController,
+                        decoration: InputDecoration(
+                          labelText: 'Item Name',
+                          labelStyle: TextStyle(color: Colors.orange),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the item name';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _itemDescController,
+                        decoration: InputDecoration(
+                          labelText: 'Item Description',
+                          labelStyle: TextStyle(color: Colors.orange),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the item description';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _itemQuantityController,
+                        decoration: InputDecoration(
+                          labelText: 'Item Quantity',
+                          labelStyle: TextStyle(color: Colors.orange),
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: <TextInputFormatter>[
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the item quantity';
+                          } else if (int.tryParse(value) == null || int.parse(value) <= 0) {
+                            return 'Quantity must be a positive integer';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _itemPriceController,
+                        decoration: InputDecoration(
+                          labelText: 'Item Price',
+                          labelStyle: TextStyle(color: Colors.orange),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the item price';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _itemDelStartTimestampController,
+                        decoration: InputDecoration(
+                          labelText: 'Delivery Start Time',
+                          labelStyle: TextStyle(color: Colors.orange),
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.calendar_today),
+                            onPressed: () => _selectDateTime(_itemDelStartTimestampController),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the delivery start time';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _itemDelEndTimestampController,
+                        decoration: InputDecoration(
+                          labelText: 'Delivery End Time',
+                          labelStyle: TextStyle(color: Colors.orange),
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.calendar_today),
+                            onPressed: () => _selectDateTime(_itemDelEndTimestampController),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the delivery end time';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: _orderEndDateController,
+                        decoration: InputDecoration(
+                          labelText: 'Order End Date (Optional)',
+                          labelStyle: TextStyle(color: Colors.orange),
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.calendar_today),
+                            onPressed: () => _selectDateTime(_orderEndDateController),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty && DateTime.tryParse(value) == null) {
+                            return 'Invalid date format';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundImage: _itemImage != null
+                              ? FileImage(_itemImage!)
+                              : _existingImageUrl != null
+                              ? NetworkImage(_existingImageUrl!) as ImageProvider
+                              : AssetImage('assets/placeholder.png'),
+                          child: _itemImage == null && _existingImageUrl == null
+                              ? Icon(Icons.add_a_photo, size: 50, color: Colors.orange)
+                              : null,
+                        ),
+                      ),
+                      if (_existingImageUrl != null)
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _itemImage = null;
+                              _existingImageUrl = null;
+                            });
+                          },
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          label: Text("Remove Image", style: TextStyle(color: Colors.red)),
+                        ),
+                    ],
                   ),
                 ),
-                readOnly: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select the delivery start time';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _itemDelEndTimestampController,
-                decoration: InputDecoration(
-                  labelText: 'Delivery End Time',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.calendar_today),
-                    onPressed: () => _selectDateTime(_itemDelEndTimestampController),
-                  ),
-                ),
-                readOnly: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select the delivery end time';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _orderEndDateController,
-                decoration: InputDecoration(
-                  labelText: 'Order End Date',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.calendar_today),
-                    onPressed: () => _selectDateTime(_orderEndDateController),
-                  ),
-                ),
-                readOnly: true,
               ),
               SizedBox(height: 20),
-              TextButton(
-                onPressed: _pickImage,
-                child: Text('Select Image'),
-              ),
-              _itemImage != null
-                  ? Image.file(_itemImage!, height: 200)
-                  : _existingImageUrl != null
-                  ? Image.network(_existingImageUrl!, height: 200)
-                  : Container(),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _saveItem,
-                child: Text('Save Item'),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  onPressed: _saveItem,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Text('Save Item', style: TextStyle(fontSize: 18)),
+                  ),
+                ),
               ),
             ],
           ),

@@ -19,6 +19,7 @@ class _SellerRegistrationState extends State<SellerRegistration> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _upiController = TextEditingController();
+  final TextEditingController _fssaiController = TextEditingController();
   File? _image;
   String? _selectedCommunity;
   String _deliveryType = 'HOME DELIVERY';
@@ -45,7 +46,6 @@ class _SellerRegistrationState extends State<SellerRegistration> {
   }
 
   void _initializeRazorpay() {
-    super.initState();
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
@@ -58,10 +58,10 @@ class _SellerRegistrationState extends State<SellerRegistration> {
     super.dispose();
   }
 
-  Future<void> pickImage() async {
+  Future<void> _pickImage() async {
     var status = await Permission.storage.status;
     if (!status.isGranted) {
-      if (await Permission.storage.request().isGranted) {
+      if (await Permission.photos.request().isGranted) {
         final pickedFile = await picker.pickImage(source: ImageSource.gallery);
         setState(() {
           if (pickedFile != null) {
@@ -71,7 +71,7 @@ class _SellerRegistrationState extends State<SellerRegistration> {
           }
         });
       } else {
-        print('Storage permission denied');
+        print('Images permission denied');
       }
     } else {
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -98,6 +98,7 @@ class _SellerRegistrationState extends State<SellerRegistration> {
         sellerPhone: _phoneController.text,
         sellerAddress: _addressController.text,
         sellerUpi: _upiController.text,
+        sellerFssai: _fssaiController.text,
         image: _image,
         community: _selectedCommunity!,
         deliveryType: _deliveryType,
@@ -160,111 +161,209 @@ class _SellerRegistrationState extends State<SellerRegistration> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Seller Registration'),
+        appBar: AppBar(
+          title: Text('Seller Registration', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.orange,
+          elevation: 0,
+        ),
+        body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+    child: Form(
+    key: _formKey,
+    child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+    Text("Register as a Seller",
+    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.deepOrangeAccent)),
+    SizedBox(height: 20),
+    TextFormField(
+    controller: _nameController,
+    decoration: InputDecoration(
+    labelText: 'Seller Name',
+    border: OutlineInputBorder(),
+    prefixIcon: Icon(Icons.person),
+    ),
+    validator: (value) {
+    if (value!.isEmpty) {
+    return 'Please enter a name';
+    }
+    return null;
+    },
+    ),
+    SizedBox(height: 20),
+    TextFormField(
+    controller: _phoneController,
+    decoration: InputDecoration(
+    labelText: 'Seller Phone',
+    border: OutlineInputBorder(),
+    prefixIcon: Icon(Icons.phone),
+    ),
+    validator: (value) {
+    if (value!.isEmpty) {
+    return 'Please enter a phone number';
+    }
+    return null;
+    },
+    enabled: false,
+    ),
+    SizedBox(height: 20),
+    TextFormField(
+    controller: _addressController,
+    decoration: InputDecoration(
+    labelText: 'Seller Address',
+    border: OutlineInputBorder(),
+    prefixIcon: Icon(Icons.location_on),
+    ),
+    validator: (value) {
+    if (value!.isEmpty) {
+    return 'Please enter an address';
+    }
+    return null;
+    },
+    ),
+    SizedBox(height: 20),
+    TextFormField(
+    controller: _upiController,
+    decoration: InputDecoration(
+    labelText: 'Seller UPI',
+    border: OutlineInputBorder(),
+    prefixIcon: Icon(Icons.account_balance_wallet),
+    ),
+    validator: (value) {
+    if (value!.isEmpty) {
+    return 'Please enter a UPI ID';
+    }
+    return null;
+    },
+    ),
+    SizedBox(height: 20),
+    TextFormField(
+    controller: _fssaiController,
+    decoration: InputDecoration(
+    labelText: 'FSSAI Code',
+    border: OutlineInputBorder(),
+    prefixIcon: Icon(Icons.qr_code),
+    ),
+    validator: (value) {
+    if (value!.isEmpty) {
+    return 'Please enter an FSSAI code';
+    }
+    return null;
+    },
+    ),
+    SizedBox(height: 20),
+    CommunityDropdown(
+    initialCommunity: _selectedCommunity,
+    onChanged: (newValue) {
+    setState(() {
+    _selectedCommunity = newValue;
+    });
+    },
+    ),
+    SizedBox(height: 20),
+    _image == null
+    ? Text('No image selected.', style: TextStyle(color: Colors.red))
+        : Image.file(_image!),
+    SizedBox(height: 10),
+    ElevatedButton.icon(
+    onPressed: _pickImage,
+    icon: Icon(Icons.camera_alt),
+    label: Text('Pick Image'),
+    style: ElevatedButton.styleFrom(
+    foregroundColor: Colors.black, backgroundColor: Colors.yellow,
+    shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(10),
+    ),
+    ),
+    ),
+    SizedBox(height: 20),
+    DropdownButtonFormField(
+    value: _deliveryType,
+    items: ['HOME DELIVERY', 'PICK UP'].map((String value) {
+    return DropdownMenuItem<String>(
+    value: value,
+    child: Text(value),
+    );
+    }).toList(),
+    onChanged: (newValue) {
+    setState(() {
+    _deliveryType = newValue!;
+    });
+    },
+    decoration: InputDecoration(
+      labelText: 'Delivery Type',
+      border: OutlineInputBorder(),
+      prefixIcon: Icon(Icons.delivery_dining),
+    ),
+    ),
+      SizedBox(height: 20),
+      Text("Membership Duration",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      ListTile(
+        title: Text('1 Month (₹400)'),
+        leading: Radio<int>(
+          value: 1,
+          groupValue: _selectedOption,
+          onChanged: (int? value) {
+            setState(() {
+              _selectedOption = value!;
+            });
+          },
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: <Widget>[
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(labelText: 'Seller Name'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter a name';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _phoneController,
-                decoration: InputDecoration(labelText: 'Seller Phone'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter a phone number';
-                  }
-                  return null;
-                },
-                enabled: false,
-              ),
-              TextFormField(
-                controller: _addressController,
-                decoration: InputDecoration(labelText: 'Seller Address'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter an address';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _upiController,
-                decoration: InputDecoration(labelText: 'Seller UPI'),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter a UPI ID';
-                  }
-                  return null;
-                },
-              ),
-              CommunityDropdown(
-                initialCommunity: _selectedCommunity,
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedCommunity = newValue;
-                  });
-                },
-              ),
-              SizedBox(height: 20),
-              _image == null
-                  ? Text('No image selected.')
-                  : Image.file(_image!),
-              ElevatedButton(
-                onPressed: pickImage,
-                child: Text('Pick Image'),
-              ),
-              SizedBox(height: 20),
-              DropdownButtonFormField(
-                value: _deliveryType,
-                items: ['HOME DELIVERY', 'PICK UP'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    _deliveryType = newValue!;
-                  });
-                },
-                decoration: InputDecoration(labelText: 'Delivery Type'),
-              ),
-              SizedBox(height: 20),
-              Column(
-                children: _options.keys.map((int months) {
-                  return RadioListTile(
-                    title: Text('$months month(s) - ₹${_options[months]}'),
-                    value: months,
-                    groupValue: _selectedOption,
-                    onChanged: (int? value) {
-                      setState(() {
-                        _selectedOption = value!;
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-              ElevatedButton(
-                onPressed: _openCheckout,
-                child: Text('Proceed to checkout'),
-              ),
-            ],
+      ListTile(
+        title: Text('3 Months (₹900)'),
+        leading: Radio<int>(
+          value: 3,
+          groupValue: _selectedOption,
+          onChanged: (int? value) {
+            setState(() {
+              _selectedOption = value!;
+            });
+          },
+        ),
+      ),
+      ListTile(
+        title: Text('6 Months (₹1200)'),
+        leading: Radio<int>(
+          value: 6,
+          groupValue: _selectedOption,
+          onChanged: (int? value) {
+            setState(() {
+              _selectedOption = value!;
+            });
+          },
+        ),
+      ),
+      ListTile(
+        title: Text('12 Months (₹1800)'),
+        leading: Radio<int>(
+          value: 12,
+          groupValue: _selectedOption,
+          onChanged: (int? value) {
+            setState(() {
+              _selectedOption = value!;
+            });
+          },
+        ),
+      ),
+      SizedBox(height: 20),
+      ElevatedButton(
+        onPressed: _openCheckout,
+        child: Text('Proceed to Payment'),
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white, backgroundColor: Colors.orange,
+          padding: EdgeInsets.symmetric(vertical: 15, horizontal: 30),
+          textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
       ),
+    ],
+    ),
+    ),
+        ),
     );
   }
 }

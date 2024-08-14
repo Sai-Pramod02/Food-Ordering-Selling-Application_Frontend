@@ -17,6 +17,7 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   late Razorpay _razorpay;
+  String? _orderId;
 
   @override
   void initState() {
@@ -25,6 +26,7 @@ class _CartPageState extends State<CartPage> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    _fetchAndValidateItems();
   }
 
   @override
@@ -33,11 +35,66 @@ class _CartPageState extends State<CartPage> {
     super.dispose();
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    // Process the order on successful payment
+  Future<void> _fetchAndValidateItems() async {
     final cart = Provider.of<Cart>(context, listen: false);
-    await _placeOrder(context, cart);
+    final sellerPhone = cart.getSellerPhone();
+
+    if (sellerPhone != null) {
+      List<Map<String, dynamic>> fetchedItems = await APIService.getSellerItems(sellerPhone);
+      if (fetchedItems != null) {
+        List fetchedItemIds = fetchedItems.map((item) => item['item_id']).toList();
+        List<CartItem> itemsToRemove = [];
+
+        for (var cartItem in cart.cartItems) {
+          if (!fetchedItemIds.contains(cartItem.itemId)) {
+            itemsToRemove.add(cartItem);
+          }
+        }
+
+        for (var item in itemsToRemove) {
+          cart.removeFromCart(item.itemId);
+        }
+      }
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    // Update the order status on successful payment
+    if (_orderId != null) {
+      await _updateOrderStatus(_orderId!);
+
+      // Retrieve seller_player_id from shared preferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? sellerPlayerId = prefs.getString('seller_player_id');
+
+      if (sellerPlayerId != null) {
+        // Send notification to seller
+        await sendNotificationToDevice(sellerPlayerId, 'We are excited to inform you that you have received a new order!');
+      }
+    }
+    // Clear the cart items after successful payment
+    Provider.of<Cart>(context, listen: false).clearCart();
     Fluttertoast.showToast(msg: "Payment Success");
+  }
+
+  Future<void> sendNotificationToDevice(String playerId, String message) async {
+    final url = Uri.parse('https://onesignal.com/api/v1/notifications');
+    final headers = {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Authorization': 'Basic YOUR_API_KEY', // Replace with your OneSignal API key
+    };
+
+    final body = jsonEncode({
+      'app_id': 'e970f590-077b-44bf-9fad-a5f9571be7f5', // Replace with your OneSignal App ID
+      'contents': {'en': message},
+      'include_player_ids': [playerId],
+    });
+
+    final response = await http.post(url, headers: headers, body: body);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to send notification');
+    }
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
@@ -110,21 +167,43 @@ class _CartPageState extends State<CartPage> {
       }).toList();
 
       // Pass the user type to the placeOrder function
-      await APIService.placeOrder(buyerPhone, sellerPhone, items, userType);
+      final response = await APIService.placeOrder(buyerPhone, sellerPhone, items, userType);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _orderId = data['order_id'].toString(); // Store the order ID
 
-      // Clear the cart items after placing the order successfully
-      cart.clearCart();
+        // Store seller_player_id in shared preferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('seller_player_id', data['seller_player_id']);
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order placed successfully')));
+        // Open payment checkout
+        _openCheckout(cart.calculateTotalPrice());
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to place order')));
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to place order: $e')));
       print(e);
     }
   }
 
+  Future<void> _updateOrderStatus(String orderId) async {
+    try {
+      final response = await APIService.updateOrderStatus(orderId);
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order completed successfully')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+      print(e);
+    }
+  }
+
   Future<String> checkUserType() async {
     String userPhone = await getPhoneNumber(); // Get phone number from shared preferences
-    var url = Uri.http(Config.apiURL, Config.checkUserTypeAPI);
+    var url = Uri.http(Config.apiURL, '/users/check-user-type-withoutplayerid');
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
@@ -187,29 +266,28 @@ class _CartPageState extends State<CartPage> {
           );
         },
       ),
-      bottomNavigationBar: BottomAppBar(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                'Total: ₹${cart.calculateTotalPrice()}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18.0,
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total: ₹${cart.calculateTotalPrice()}',
+                  style: TextStyle(
+                    fontSize: 20.0,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              SizedBox(width: 20.0),
-              ElevatedButton(
-                onPressed: () {
-                  double totalAmount = cart.calculateTotalPrice();
-                  _openCheckout(totalAmount);
-                },
-                child: Text('Place Order'),
-              ),
-            ],
-          ),
+                ElevatedButton(
+                  onPressed: () => _placeOrder(context, cart),
+                  child: Text('Place Order'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
